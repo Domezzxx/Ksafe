@@ -1,0 +1,91 @@
+// firestore.rules
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── HELPER FUNCTIONS ──────────────────────────
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function isUser(uid) {
+      return isAuth() && request.auth.uid == uid;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isAuth() && getUserData().role in ['admin', 'superadmin'];
+    }
+
+    function isSuperAdmin() {
+      return isAuth() && getUserData().role == 'superadmin';
+    }
+
+    // ─── USERS ─────────────────────────────────────
+    match /users/{userId} {
+      // อ่านได้เฉพาะเจ้าของหรือ Admin
+      allow read: if isUser(userId) || isAdmin();
+
+      // สร้างได้เฉพาะตัวเอง
+      allow create: if isUser(userId);
+
+      // แก้ไขได้เฉพาะเจ้าของหรือ Admin
+      allow update: if isUser(userId) || isAdmin();
+
+      // ลบได้เฉพาะ SuperAdmin
+      allow delete: if isSuperAdmin();
+    }
+
+    // ─── INCIDENTS ─────────────────────────────────
+    match /incidents/{incidentId} {
+      // อ่านได้: เจ้าของหรือ Admin
+      allow read: if isAuth() &&
+        (resource.data.userId == request.auth.uid || isAdmin());
+
+      // สร้างได้: ผู้ใช้ที่ login แล้ว
+      allow create: if isAuth() &&
+        request.resource.data.userId == request.auth.uid;
+
+      // แก้ไขสถานะ: เฉพาะ Admin
+      allow update: if isAdmin();
+
+      // ลบ: เฉพาะ SuperAdmin
+      allow delete: if isSuperAdmin();
+    }
+
+    // ─── POI ───────────────────────────────────────
+    match /poi/{poiId} {
+      // อ่านได้ทุกคนที่ login
+      allow read: if isAuth();
+
+      // เพิ่ม/แก้ไข/ลบ: เฉพาะ Admin
+      allow write: if isAdmin();
+    }
+
+    // ─── SYSTEM CONTACTS ───────────────────────────
+    match /systemContacts/{contactId} {
+      allow read: if isAuth();
+      allow write: if isAdmin();
+    }
+
+    // ─── NOTIFICATIONS ─────────────────────────────
+    match /notifications/{notifId} {
+      // Admin สร้างได้
+      allow create: if isAdmin();
+
+      // ทุกคนอ่านได้
+      allow read: if isAuth();
+
+      allow update, delete: if isAdmin();
+    }
+
+    // ─── SETTINGS ──────────────────────────────────
+    match /settings/{settingId} {
+      allow read: if isAdmin();
+      allow write: if isSuperAdmin();
+    }
+  }
+}
