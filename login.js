@@ -7,83 +7,99 @@ import {
   StyleSheet,
   SafeAreaView,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  Image
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
-const Login = ({ onLogin, onRegister }) => {
-  // สร้างกล่องความจำสำหรับเก็บเบอร์โทร รหัสผ่าน และสถานะการโชว์รหัสผ่าน
+// 💡 จุดที่ 1: เพิ่ม onForgotPassword ตรงนี้
+const Login = ({ onLogin, onRegister, onForgotPassword }) => {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [password, setPassword] = useState('');
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* 💡 KeyboardAvoidingView ช่วยดันหน้าจอขึ้นเวลาคีย์บอร์ดโผล่ จะได้ไม่บังปุ่ม */}
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
-      >
-        {/* กล่องสีขาวตรงกลาง */}
-        <View style={styles.card}>
-          <Text style={styles.headerText}>เข้าสู่ระบบ ที่นี่</Text>
-          <Text style={styles.subText}>ยินดีต้อนรับ</Text>
+    <View style={styles.mainContainer}>
+      
+      <Image 
+        source={require('./assets/bg.png')} 
+        style={styles.headerImage}
+        resizeMode="cover"
+      />
 
-          {/* ช่องใส่เบอร์โทรศัพท์ */}
-          <Text style={styles.label}>เบอร์โทรศัพท์</Text>
-          <TextInput
-            style={styles.input}
-            keyboardType="phone-pad" // ดึงแป้นพิมพ์ตัวเลขขึ้นมา
-            value={phoneNumber}
-            onChangeText={setPhoneNumber}
-          />
+      <SafeAreaView style={styles.container}>
+        <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.keyboardView}
+        >
+          <View style={styles.card}>
+            <Text style={styles.headerText}>เข้าสู่ระบบ ที่นี่</Text>
+            <Text style={styles.subText}>ยินดีต้อนรับ</Text>
 
-          {/* ช่องใส่รหัสผ่าน */}
-          <Text style={styles.label}>รหัสผ่าน</Text>
-          <View style={styles.passwordContainer}>
+            <Text style={styles.label}>เบอร์โทรศัพท์</Text>
             <TextInput
-              style={styles.passwordInput}
-              secureTextEntry={!isPasswordVisible} // ซ่อน/โชว์ รหัสผ่าน
-              value={password}
-              onChangeText={setPassword}
+              style={styles.input}
+              keyboardType="phone-pad" 
+              value={phoneNumber}
+              onChangeText={setPhoneNumber}
             />
-            {/* ปุ่มรูปตา */}
-            <TouchableOpacity
-              style={styles.eyeIcon}
-              onPress={() => setIsPasswordVisible(!isPasswordVisible)}
-            >
-              <Feather
-                name={isPasswordVisible ? "eye" : "eye-off"}
-                size={20}
-                color="black"
+
+            <Text style={styles.label}>รหัสผ่าน</Text>
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                secureTextEntry={!isPasswordVisible} 
+                value={password}
+                onChangeText={setPassword}
               />
+              <TouchableOpacity
+                style={styles.eyeIcon}
+                onPress={() => setIsPasswordVisible(!isPasswordVisible)}
+              >
+                <Feather
+                  name={isPasswordVisible ? "eye" : "eye-off"}
+                  size={20}
+                  color="black"
+                />
+              </TouchableOpacity>
+            </View>
+
+            {/* 💡 จุดที่ 2: เพิ่ม onPress={onForgotPassword} ตรงนี้ */}
+            <TouchableOpacity style={styles.forgotPassword} onPress={onForgotPassword}>
+              <Text style={styles.forgotPasswordText}>ลืมรหัสผ่าน ?</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.primaryButton} onPress={onLogin}>
+              <Text style={styles.buttonText}>เข้าสู่ระบบ</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.secondaryButton} onPress={onRegister}>
+              <Text style={styles.buttonText}>สมัครสมาชิก</Text>
             </TouchableOpacity>
           </View>
-
-          {/* ปุ่มลืมรหัสผ่าน */}
-          <TouchableOpacity style={styles.forgotPassword}>
-            <Text style={styles.forgotPasswordText}>ลืมรหัสผ่าน ?</Text>
-          </TouchableOpacity>
-
-          {/* ปุ่มเข้าสู่ระบบ */}
-          <TouchableOpacity style={styles.primaryButton} onPress={onLogin}>
-            <Text style={styles.buttonText}>เข้าสู่ระบบ</Text>
-          </TouchableOpacity>
-
-          {/* ปุ่มสมัครสมาชิก */}
-          <TouchableOpacity style={styles.secondaryButton} onPress={onRegister}>
-            <Text style={styles.buttonText}>สมัครสมาชิก</Text>
-          </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  mainContainer: {
+    flex: 1,
+    backgroundColor: '#FFFFFF', 
+  },
+  headerImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    width: '100%',
+    height: '50%',
+    borderBottomLeftRadius: 40,
+    borderBottomRightRadius: 40,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#F48E54',
     justifyContent: 'center',
     padding: 20,
   },
@@ -95,12 +111,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 25,
-
-    // 💡 เพิ่ม 3 บรรทัดนี้เข้าไปครับ
-    width: '100%',         // ให้กว้างเต็มพื้นที่ที่กำหนด
-    maxWidth: 400,         // ล็อคความกว้างสูงสุดไม่ให้เกิน 400px
-    alignSelf: 'center',   // จัดกล่องให้อยู่กึ่งกลางหน้าจอเสมอ
-
+    width: '100%',         
+    maxWidth: 400,         
+    alignSelf: 'center',   
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
