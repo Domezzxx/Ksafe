@@ -42,34 +42,63 @@ const EmergencyHome = () => (
   <View style={styles.pageContent}>
     <View style={styles.grid}>
       <ServiceCard title="สถานีตำรวจ" subtitle="แจ้งเหตุด่วนเหตุร้ายกับตำรวจ" icon={require('./assets/police.png')} />
-      <ServiceCard title="แพทย์ฉุกเฉิน" subtitle="บริการทางด้านสุขภาพ การส่งเสริม ป้องกัน รักษา และฟื้นฟูสภาวะความเจ็บป่วย" icon={require('./assets/hospital.png')} />
-      <ServiceCard title="กู้ภัย กู้ชีพ" subtitle="อุบัติเหตุฉุกเฉิน เหตุเร่งด่วน" icon={require('./assets/emergency.png')} />
-      <ServiceCard title="เพลิงไหม้" subtitle="แจ้งเหตุเพลิงไหม้" icon={require('./assets/fire.png')} />
+      <ServiceCard title="แพทย์ฉุกเฉิน" 
+      subtitle="บริการทางด้านสุขภาพ การส่งเสริม ป้องกัน รักษา และฟื้นฟูสภาวะความเจ็บป่วย" icon={require('./assets/hospital.png')} />
+      <ServiceCard title="กู้ภัย กู้ชีพ" 
+      subtitle="อุบัติเหตุฉุกเฉิน เหตุเร่งด่วน" icon={require('./assets/rs.png')} />
+      <ServiceCard title="เพลิงไหม้" 
+      subtitle="แจ้งเหตุเพลิงไหม้" icon={require('./assets/fire.png')} />
     </View>
     <Text style={styles.sectionTitle}>เบอร์ติดต่ออื่นๆ</Text>
-    <ContactItem title="สถานีตำรวจ" subtitle="แจ้งเหตุด่วนเหตุร้ายกับตำรวจ" icon={require('./assets/police.png')} />
-    <ContactItem title="โรงพยาบาล" subtitle="บริการทางด้านสุขภาพ" icon={require('./assets/hospital.png')} />
-    <ContactItem title="กู้ภัย กู้ชีพ" subtitle="อุบัติเหตุฉุกเฉิน เหตุเร่งด่วน" icon={require('./assets/emergency.png')} />
+    <ContactItem title="สถานีตำรวจ"
+    subtitle="แจ้งเหตุด่วนเหตุร้ายกับตำรวจ" icon={require('./assets/police.png')} />
+    <ContactItem title="โรงพยาบาล" 
+    subtitle="บริการทางด้านสุขภาพ" icon={require('./assets/hospital.png')} />
+    <ContactItem title="กู้ภัย กู้ชีพ" 
+    subtitle="อุบัติเหตุฉุกเฉิน เหตุเร่งด่วน" icon={require('./assets/rs.png')} />
+    <ContactItem title="เพลิงไหม้" 
+    subtitle="แจ้งเหตุเพลิงไหม้" icon={require('./assets/fire.png')} />
+    <ContactItem title="การไฟฟ้าส่วนภูมิภาค" subtitle="จัดหาและจำหน่ายพลังงานไฟฟ้า" icon={require('./assets/phifa.png')} />
+    <ContactItem title="กรมการขนส่งทางบก" 
+    subtitle="ดูแล จัดระเบียบ พัฒนาระบบการขนส่งทางถนน" icon={require('./assets/khonsong.png')} />
+    <ContactItem title="สายด่วนจราจร" 
+    subtitle="ขอความช่วยเหลือบนท้องถนนตลอด 24 ชั่วโมง " icon={require('./assets/jrajon.png')} />
+    <ContactItem title="กองปราบ" subtitle="สายด่วนแจ้งเหตุอาชญากรรมเป็นภัยต่อประเทศ " icon={require('./assets/kongparb.png')} />
+    <ContactItem title="ตำรวจท่องเที่ยว" subtitle="ดูแลแก่นักท่องเที่ยวทั้งชาวไทยและต่างชาติ " icon={require('./assets/thongtiaw.png')} />
+    <ContactItem title="ศูนย์เตือนภัยพิบัติแห่งชาติ" subtitle="เฝ้าระวัง แจ้งเตือนภัยธรรมชาติล่วงหน้า " icon={require('./assets/ppb.png')} />
+    <ContactItem title="ร้องเรียนเรื่องรถโดยสารสาธารณะ" subtitle="ร้องเรียนรถโดยสารสาธารณะ (แท็กซี่, รถตู้, ประจำทาง) " icon={require('./assets/bus.png')} />
+
+
   </View>
 );
 
 const MedicalHome = () => (
   <View style={styles.pageContent}>
     <View style={styles.grid}>
-      <ServiceCard title="กู้ภัย กู้ชีพ" subtitle="อุบัติเหตุฉุกเฉิน เหตุเร่งด่วน" icon={require('./assets/emergency.png')} />
-      <ServiceCard title="แพทย์ฉุกเฉิน" subtitle="เหตุฉุกเฉินเหตุร้าย จากสายด่วนตรวจสอบ" icon={require('./assets/hospital.png')} />
+      <ServiceCard title="กู้ภัย กู้ชีพ" 
+      subtitle="อุบัติเหตุฉุกเฉิน เหตุเร่งด่วน" icon={require('./assets/rs.png')} />
+      <ServiceCard title="แพทย์ฉุกเฉิน" 
+      subtitle="เหตุฉุกเฉินเหตุร้าย จากสายด่วนตรวจสอบ" icon={require('./assets/rp.png')} />
       <ServiceCard title="สายด่วนจราจร" subtitle="ขอความช่วยเหลือบนท้องถนนตลอด 24 ชั่วโมง" icon={require('./assets/saildung.png')} />
     </View>
     <Text style={styles.sectionTitle}>เบอร์ติดต่ออื่นๆ</Text>
     <ContactItem title="โรงพยาบาลมหาราชนครราชสีมา" subtitle="ศูนย์การแพทย์ชั้นนำระดับตติยภูมิของภาคอีสาน" icon={require('./assets/Maharat.png')} />
+    <ContactItem title="โรงพยาบาลกรุงเทพราชสีมา" subtitle="มาตรฐานบริการระดับสากล เพื่อสุขภาพที่ดีของคุณ" icon={require('./assets/kungthep.png')} />
+    <ContactItem title="แจ้งเหตุด่วน" 
+    subtitle="บริการปฐมภูมิเบื้องต้น เข้าถึงง่ายเพื่อชาว มทส. " icon={require('./assets/pcu.png')} />
+    <ContactItem title="โรงพยาบาลราชสีมา ฮอสพิทอล"
+      subtitle="รักษาครบวงจร สะดวกสบาย ใจกลางเมือง เข้าถึงง่ายเพื่อชาว มทส. " icon={require('./assets/rh.png')} />
+    <ContactItem title="โรงพยาบาลมหาวิทยาลัยเทคโนโลยีสุรนารี" subtitle="นวัตกรรมการแพทย์ที่ทันสมัย เพื่อคุณภาพชีวิต" icon={require('./assets/suth.png')} />
+    <ContactItem title="โรงพยาบาลริมลิฟวิ่ง" subtitle="ผู้เชี่ยวชาญด้านการฟื้นฟู และการดูแลผู้สูงอายุ เพื่อคุณภาพชีวิต" icon={require('./assets/rim.png')} />
+  
   </View>
 );
 
 const SafetyHome = () => (
   <View style={styles.pageContent}>
     <View style={styles.grid}>
-      <ServiceCard title="กู้ภัย กู้ชีพ" subtitle="อุบัติเหตุฉุกเฉิน เหตุเร่งด่วน" icon={require('./assets/emergency.png')} />
-      <ServiceCard title="แพทย์ฉุกเฉิน" subtitle="เหตุฉุกเฉินเหตุร้าย จากสายด่วนตรวจสอบ" icon={require('./assets/hospital.png')} />
+      <ServiceCard title="กู้ภัย กู้ชีพ" subtitle="อุบัติเหตุฉุกเฉิน เหตุเร่งด่วน" icon={require('./assets/rs.png')} />
+      <ServiceCard title="แพทย์ฉุกเฉิน" subtitle="เหตุฉุกเฉินเหตุร้าย จากสายด่วนตรวจสอบ" icon={require('./assets/rp.png')} />
     </View>
     <Text style={styles.sectionTitle}>เบอร์ติดต่ออื่นๆ</Text>
     <ContactItem title="สถานีตำรวจภูธรโพธิ์กลาง" subtitle="พิทักษ์สันติราษฎร์ด้วยใจ พร้อมรับใช้ประชาชนชาวโคราช" icon={require('./assets/poograng.png')} />
@@ -82,11 +111,21 @@ const UtilityHome = () => (
   <View style={styles.pageContent}>
     <View style={styles.grid}>
       <ServiceCard title="การไฟฟ้าส่วนภูมิภาค" subtitle="จัดหาและจำหน่ายพลังงานไฟฟ้า" icon={require('./assets/phifa.png')} />
-      <ServiceCard title="กองปราบ" subtitle="สายด่วนแจ้งเหตุอาชญากรรมเป็นภัยต่อประเทศ" icon={require('./assets/kongpab.png')} />
+      <ServiceCard title="กองปราบ" subtitle="สายด่วนแจ้งเหตุอาชญากรรมเป็นภัยต่อประเทศ" icon={require('./assets/kongparb.png')} />
       <ServiceCard title="ตำรวจท่องเที่ยว" subtitle="ดูแลแก่นักท่องเที่ยวทั้งชาวไทยและต่างชาติ" icon={require('./assets/thongtiaw.png')} />
+      <ServiceCard title="ศูนย์เตือนภัยพิบัติแห่งชาติ" subtitle="เฝ้าระวัง แจ้งเตือนภัยธรรมชาติล่วงหน้า " icon={require('./assets/ppb.png')} />
     </View>
     <Text style={styles.sectionTitle}>เบอร์ติดต่ออื่นๆ</Text>
     <ContactItem title="การไฟฟ้าส่วนภูมิภาคเขต 3" subtitle="มาตรฐานบริการด้านพลังงาน สร้างสรรค์ความสว่างไสวให้ภูมิภาค" icon={require('./assets/phifa.png')} />
+    <ContactItem title="ชมรมจิตอาสาแสดทอง " 
+      subtitle="พลังแห่งการแบ่งปัน สร้างสรรค์ความสุขเพื่อสังคม" icon={require('./assets/sutv.png')} />
+    <ContactItem title="ศูนย์กู้ภัยฮุก 31 "
+      subtitle="บรรเทาสาธารณภัย มั่นใจในการบริการเคียงข้างทุกข์สุขชาวนครราชสีมา" icon={require('./assets/huk.png')} />
+    <ContactItem title="สำนักงานกรมทางหลวงที่ 10 นครราชสีมา "
+      subtitle="ประตูสู่เส้นทางที่ปลอดภัย พัฒนาโครงข่ายเพื่อความสะดวกของคนไทย" icon={require('./assets/sumnak.png')} />
+
+
+
   </View>
 );
 
@@ -130,30 +169,30 @@ export default function DashboardScreen({ onGoHome, onGoSOS, onGoSearch, onGoPro
       {/* Footer ดีไซน์ตามภาพและคลิกได้จริง */}
       <View style={styles.footer}>
         <TouchableOpacity style={styles.footerButton} onPress={onGoHome}>
-          <Image 
-            source={require('./assets/home (2).png')} 
-            style={[styles.footerIcon, { tintColor: '#F87C47' }]} 
+          <Image
+            source={require('./assets/home (2).png')}
+            style={[styles.footerIcon, { tintColor: '#F87C47' }]}
           />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.footerButton} onPress={onGoSOS}>
-          <Image 
-            source={require('./assets/emergency (1).png')} 
-            style={[styles.footerIcon, { tintColor: '#929292' }]} 
+          <Image
+            source={require('./assets/emergency (1).png')}
+            style={[styles.footerIcon, { tintColor: '#929292' }]}
           />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.footerButton} onPress={onGoSearch}>
-          <Image 
-            source={require('./assets/map (1).png')} 
-            style={[styles.footerIcon, { tintColor: '#929292' }]} 
+          <Image
+            source={require('./assets/map (1).png')}
+            style={[styles.footerIcon, { tintColor: '#929292' }]}
           />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.footerButton} onPress={onGoProfile}>
-          <Image 
-            source={require('./assets/user.png')} 
-            style={[styles.footerIcon, { tintColor: '#D9D9D9' }]} 
+          <Image
+            source={require('./assets/user.png')}
+            style={[styles.footerIcon, { tintColor: '#D9D9D9' }]}
           />
         </TouchableOpacity>
       </View>
