@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
   distanceTitle: { fontSize: 22, fontWeight: 'bold' },
   subText: { color: '#888', fontSize: 12, marginBottom: 20, marginTop: 5 },
   locationRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
-  dotCurrent: { width: 20, height: 20, borderRadius: 10, backgroundColor: '#4285F4', justifyContent: 'center', alignItems: 'center' },
+  dotCurrent: { width: 20, height: 20, borderRadius: 10, backgroundColor: '#0c1fcf', justifyContent: 'center', alignItems: 'center' },
   dotDest: { width: 20, height: 20, borderRadius: 10, backgroundColor: '#F7934C', justifyContent: 'center', alignItems: 'center' },
   innerDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#fff' },
   addressBox: { flex: 1, marginLeft: 15, padding: 12, borderWidth: 1, borderColor: '#eee', borderRadius: 15 },
