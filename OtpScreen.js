@@ -1,11 +1,19 @@
 import React, { useState, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, SafeAreaView, KeyboardAvoidingView, Platform, Image
+  StyleSheet, SafeAreaView, KeyboardAvoidingView, Platform, Image,
+  Alert, ActivityIndicator // 💡 เพิ่ม Alert และ ActivityIndicator
 } from 'react-native';
 
-export default function OtpScreen({ onVerify, onBack }) {
+// 💡 เพิ่มการนำเข้า Firebase
+import { db } from './firebaseConfig';
+import { 
+    doc, runTransaction, Timestamp, collection, getDocs, query, orderBy, limit 
+} from 'firebase/firestore';
+
+export default function OtpScreen({ onVerify, onBack, userData }) { // 💡 รับ userData เพิ่ม
   const [otp, setOtp] = useState(['', '', '', '']);
+  const [loading, setLoading] = useState(false); // 💡 สถานะโหลด
   const inputs = useRef([]);
 
   const handleChange = (text, index) => {
@@ -20,6 +28,63 @@ export default function OtpScreen({ onVerify, onBack }) {
   const handleKeyPress = ({ nativeEvent }, index) => {
     if (nativeEvent.key === 'Backspace' && !otp[index] && index > 0) {
       inputs.current[index - 1].focus();
+    }
+  };
+
+  // 💡 ฟังก์ชันจัดการการยืนยันและบันทึกข้อมูล
+  const handleVerify = async () => {
+    const otpCode = otp.join('');
+    if (otpCode.length < 4) {
+      Alert.alert('แจ้งเตือน', 'กรุณากรอกรหัส OTP ให้ครบถ้วน');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // 1. หาเลข ID ล่าสุดจากตาราง users
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, orderBy("user_id", "desc"), limit(1));
+      const querySnapshot = await getDocs(q);
+      
+      let lastId = 0;
+      if (!querySnapshot.empty) {
+        lastId = querySnapshot.docs[0].data().user_id;
+      }
+      
+      const newId = lastId + 1;
+      const userIdString = String(newId);
+
+      // 2. ใช้ Transaction บันทึกข้อมูลที่ส่งมาจากหน้า Register
+      await runTransaction(db, async (transaction) => {
+        const userRef = doc(db, "users", userIdString);
+        
+        transaction.set(userRef, {
+          user_id: newId, 
+          first_name: userData?.name || "Unknown",
+          last_name: "",         
+          phone_number: userData?.phone || "",
+          Password: userData?.password || "",
+          role: 'user',
+          birth_date: Timestamp.fromDate(new Date(1990, 11, 31)), 
+          blood_type: "",        
+          chronic_diseases: "",  
+          gender: "",            
+          height: "",            
+          weight: "",            
+          is_organ_donor: false,
+          is_verified: true, // ยืนยันผ่าน OTP แล้ว
+          created_at: Timestamp.now()
+        });
+      });
+
+      Alert.alert('สำเร็จ', 'ยืนยันรหัสและสร้างบัญชีเรียบร้อยแล้ว');
+      if (onVerify) onVerify(); 
+
+    } catch (error) {
+      console.error("OTP Verification Error: ", error);
+      Alert.alert('ผิดพลาด', 'ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -43,7 +108,8 @@ export default function OtpScreen({ onVerify, onBack }) {
 
             <Text style={styles.headerText}>ยืนยันรหัส OTP</Text>
             <Text style={styles.subText}>
-              เราได้ส่งรหัส OTP ไปยังโทรศัพท์ของ{'\n'}คุณเรียบร้อยแล้ว
+              เราได้ส่งรหัส OTP ไปยังโทรศัพท์ของ{'\n'}
+              {userData?.phone || 'คุณ'} เรียบร้อยแล้ว
             </Text>
 
             <TouchableOpacity style={styles.resendContainer}>
@@ -68,8 +134,16 @@ export default function OtpScreen({ onVerify, onBack }) {
               ))}
             </View>
 
-            <TouchableOpacity style={styles.primaryButton} onPress={onVerify}>
-              <Text style={styles.buttonText}>ยืนยัน</Text>
+            <TouchableOpacity 
+              style={[styles.primaryButton, { opacity: loading ? 0.7 : 1 }]} 
+              onPress={handleVerify}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.buttonText}>ยืนยัน</Text>
+              )}
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
