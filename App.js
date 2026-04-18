@@ -13,50 +13,113 @@ import SosScreen from './sos';
 import ForgotPassword from './ForgotPassword';
 import ResetPassword from './ResetPassword';
 import ProfileScreen from './ProfileScreen';
-import MapScreen from './MapScreen'; // 💡 Import เพิ่มตามชุดที่ 2
+import MapScreen from './MapScreen';
+import AdminHomeScreen from './AdminHomeScreen';
 
 export default function App() {
-  // 1. สถานะสำหรับสลับหน้าจอ
   const [currentScreen, setCurrentScreen] = useState('Welcome1');
-  
-  // 2. สถานะสำหรับเก็บข้อมูลสถานที่ที่เลือก (ใช้ร่วมกันทั้งระบบ)
   const [selectedPlace, setSelectedPlace] = useState(null);
+  
+  const [tempUserData, setTempUserData] = useState(null);
+  const [resetPhone, setResetPhone] = useState(''); // เก็บเบอร์โทรศัพท์สำหรับ Reset รหัสผ่าน
 
-  // 3. ฟังก์ชันส่วนกลางสำหรับ Navigation (Footer/Main)
   const navigateTo = {
     home: () => setCurrentScreen('Home'),
     sos: () => setCurrentScreen('SOS'),
     search: () => setCurrentScreen('Search'),
     profile: () => setCurrentScreen('Profile'),
+    admin: () => setCurrentScreen('AdminHome'),
   };
 
-  // --- 1. กลุ่มหน้า Welcome ---
+  // --- Welcome Screens ---
   if (currentScreen === 'Welcome1') return <WelcomeScreen onNext={() => setCurrentScreen('Welcome2')} />;
   if (currentScreen === 'Welcome2') return <WelcomeScreen2 onNext={() => setCurrentScreen('Welcome3')} onBack={() => setCurrentScreen('Welcome1')} />;
   if (currentScreen === 'Welcome3') return <WelcomeScreen3 onNext={() => setCurrentScreen('Login')} onBack={() => setCurrentScreen('Welcome2')} />;
 
-  // --- 2. กลุ่มหน้า Login / Register / OTP / Success ---
+  // --- Auth Screens ---
   if (currentScreen === 'Login') {
     return (
       <Login 
-        onLogin={navigateTo.home} 
+        onLogin={(role) => role === 'admin' ? navigateTo.admin() : navigateTo.home()} 
         onRegister={() => setCurrentScreen('Register')} 
         onForgotPassword={() => setCurrentScreen('ForgotPassword')} 
       />
     );
   }
-  if (currentScreen === 'Register') return <Register onNext={() => setCurrentScreen('OTP')} onBack={() => setCurrentScreen('Login')} />;
-  if (currentScreen === 'OTP') return <OtpScreen onVerify={() => setCurrentScreen('Success')} onBack={() => setCurrentScreen('Register')} />;
+  
+  if (currentScreen === 'Register') {
+    return (
+      <Register 
+        onNext={(data) => {
+          setTempUserData(data); 
+          setCurrentScreen('OTP');
+        }} 
+        onBack={() => setCurrentScreen('Login')} 
+      />
+    );
+  }
+
+  if (currentScreen === 'OTP') {
+    return (
+      <OtpScreen 
+        userData={tempUserData} 
+        onVerify={() => {
+          setTempUserData(null); 
+          setCurrentScreen('Success');
+        }} 
+        onBack={() => setCurrentScreen('Register')} 
+      />
+    );
+  }
+
   if (currentScreen === 'Success') return <Success onNext={() => setCurrentScreen('Login')} />;
 
-  // --- 3. กลุ่มหน้าลืมรหัสผ่าน (Forgot Password Flow) ---
-  if (currentScreen === 'ForgotPassword') return <ForgotPassword onNext={() => setCurrentScreen('ForgotOTP')} onBack={() => setCurrentScreen('Login')} />;
-  if (currentScreen === 'ForgotOTP') return <OtpScreen onVerify={() => setCurrentScreen('ResetPassword')} onBack={() => setCurrentScreen('ForgotPassword')} />;
-  if (currentScreen === 'ResetPassword') return <ResetPassword onNext={() => setCurrentScreen('Login')} onBack={() => setCurrentScreen('ForgotOTP')} />;
+  // --- Forgot Password Flow ---
+  if (currentScreen === 'ForgotPassword') {
+    return (
+      <ForgotPassword 
+        onNext={(phoneNumber) => { 
+          setResetPhone(String(phoneNumber)); // เก็บเบอร์โทรศัพท์
+          setCurrentScreen('ForgotOTP'); 
+        }} 
+        onBack={() => setCurrentScreen('Login')} 
+      />
+    );
+  }
 
-  // --- 4. กลุ่มหน้าฟีเจอร์หลัก (Search, Detail, Map, SOS, Profile) ---
-  
-  // 📌 หน้าค้นหาสถานที่
+  if (currentScreen === 'ForgotOTP') {
+    return (
+      <OtpScreen 
+        onVerify={() => setCurrentScreen('ResetPassword')} 
+        onBack={() => setCurrentScreen('ForgotPassword')} 
+      />
+    );
+  }
+
+  if (currentScreen === 'ResetPassword') {
+    return (
+      <ResetPassword 
+        phone={resetPhone} // ส่งเบอร์โทรศัพท์ไป Query ใน Firebase
+        onNext={() => {
+          setResetPhone(''); // ล้างค่าเบอร์หลังเสร็จ
+          setCurrentScreen('Login');
+        }} 
+        onBack={() => setCurrentScreen('ForgotOTP')} 
+      />
+    );
+  }
+
+  // --- Admin Screens ---
+  if (currentScreen === 'AdminHome') {
+    return (
+      <AdminHomeScreen 
+        onLogout={() => setCurrentScreen('Login')}
+        onGoProfile={navigateTo.profile}
+      />
+    );
+  }
+
+  // --- Main App Screens ---
   if (currentScreen === 'Search') {
     return (
       <SearchScreen 
@@ -73,18 +136,16 @@ export default function App() {
     );
   }
 
-  // 📌 หน้าแสดงรายละเอียดสถานที่
   if (currentScreen === 'Detail') {
     return (
       <DetailScreen 
         data={selectedPlace} 
         onBack={() => setCurrentScreen('Search')} 
-        onPressMap={() => setCurrentScreen('Map')} // 💡 เชื่อมไปหน้า Map
+        onPressMap={() => setCurrentScreen('Map')}
       />
     );
   }
 
-  // 📌 หน้าแผนที่และการนำทาง
   if (currentScreen === 'Map') {
     return (
       <MapScreen 
@@ -98,7 +159,6 @@ export default function App() {
     );
   }
 
-  // 📌 หน้าฉุกเฉิน SOS
   if (currentScreen === 'SOS') {
     return (
       <SosScreen 
@@ -110,7 +170,6 @@ export default function App() {
     );
   }
 
-  // 📌 หน้าโปรไฟล์
   if (currentScreen === 'Profile') {
     return (
       <ProfileScreen 
@@ -118,20 +177,20 @@ export default function App() {
         onGoSOS={navigateTo.sos}
         onGoSearch={navigateTo.search}
         onGoProfile={navigateTo.profile}
+        onLogout={() => setCurrentScreen('Login')} 
       />
     );
   }
 
-  // --- 5. หน้าหลัก (Home) ---
-  // จะถูกเรียกใช้เมื่อ currentScreen === 'Home' หรือไม่อยู่ในเงื่อนไขด้านบน
+  // Default: Home Screen
   return (
     <HomeScreen 
       onGoHome={navigateTo.home}
       onGoSOS={navigateTo.sos}
       onGoSearch={navigateTo.search}
       onGoProfile={navigateTo.profile}
-      onGoToSearch={navigateTo.search} // สำหรับปุ่มลัดในหน้า Home
-      onGoToSOS={navigateTo.sos}      // สำหรับปุ่มลัดในหน้า Home
+      onGoToSearch={navigateTo.search} 
+      onGoToSOS={navigateTo.sos}      
     />
   );
 }
