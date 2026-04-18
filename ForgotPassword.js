@@ -1,11 +1,20 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, SafeAreaView, KeyboardAvoidingView, Platform, Image
+  StyleSheet, SafeAreaView, KeyboardAvoidingView, Platform, Image, Alert
 } from 'react-native';
 
 const ForgotPassword = ({ onNext, onBack }) => {
   const [phone, setPhone] = useState('');
+
+  // 💡 สร้างฟังก์ชันจัดการการกดปุ่มเพื่อส่งเฉพาะค่า String ออกไป
+  const handleNext = () => {
+    if (phone.trim().length < 10) {
+      Alert.alert('แจ้งเตือน', 'กรุณากรอกเบอร์โทรศัพท์ให้ถูกต้อง');
+      return;
+    }
+    if (onNext) onNext(phone.trim()); // ✅ ส่งเฉพาะ string ของเบอร์โทร
+  };
 
   return (
     <View style={styles.mainContainer}>
@@ -37,9 +46,8 @@ const ForgotPassword = ({ onNext, onBack }) => {
               onChangeText={setPhone}
             />
 
-            {/* เพิ่ม Margin ดันปุ่มลงไปให้ห่างจาก Input เหมือนในรูป */}
             <View style={{ marginTop: 20 }}>
-              <TouchableOpacity style={styles.primaryButton} onPress={onNext}>
+              <TouchableOpacity style={styles.primaryButton} onPress={handleNext}>
                 <Text style={styles.buttonText}>ถัดไป</Text>
               </TouchableOpacity>
             </View>
