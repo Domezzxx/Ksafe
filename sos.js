@@ -9,43 +9,52 @@ import {
     Dimensions,
     SafeAreaView,
     StatusBar,
-    Vibration // 1. เพิ่ม Vibration ตรงนี้
+    Vibration,
+    Linking // นำเข้า Linking สำหรับสั่งเปิดแอปโทรศัพท์
 } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
 const SLIDE_WIDTH = width * 0.85;
 const KNOB_SIZE = 64;
 
-export default function SOSScreen({ onCancel }) {
+// รับ prop emergencyContact ที่ส่งมาจาก App.js
+export default function SOSScreen({ onCancel, emergencyContact }) {
     const [isCounting, setIsCounting] = useState(false);
     const [timer, setTimer] = useState(5);
     const pan = useRef(new Animated.Value(0)).current;
 
     const redBarWidth = Animated.add(pan, KNOB_SIZE);
 
+    // กำหนดค่าเริ่มต้นในกรณีที่ยังไม่มีการส่งข้อมูลมา
+    const contactName = emergencyContact?.name || "สถานีตำรวจ";
+    const contactPhone = emergencyContact?.phone || "191";
+
     useEffect(() => {
         let interval;
         if (isCounting && timer > 0) {
-
-            Vibration.vibrate(400); // 2. สั่งให้สั่น (400ms) ทุกครั้งที่นับถอยหลัง
+            Vibration.vibrate(400); 
 
             interval = setInterval(() => {
                 setTimer((prev) => prev - 1);
             }, 1000);
         } else if (timer === 0) {
-            // สั่นยาวๆ หรือสั่นเป็นจังหวะตอนถึง 0 ก่อนโทร (ถ้าต้องการ)
             Vibration.vibrate([0, 500, 200, 500]);
-            alert("กำลังโทรหาบริการฉุกเฉิน...");
+            
+            // สั่งให้เปิดแอปโทรศัพท์และโทรออกตามเบอร์ที่ตั้งไว้
+            Linking.openURL(`tel:${contactPhone}`).catch(() => {
+                alert(`ไม่สามารถโทรออกได้ กรุณาโทร ${contactPhone} ด้วยตนเอง`);
+            });
+            
             handleReset();
         }
         return () => clearInterval(interval);
-    }, [isCounting, timer]);
+    }, [isCounting, timer, contactPhone]);
 
     const handleReset = () => {
         setIsCounting(false);
         setTimer(5);
         pan.setValue(0);
-        Vibration.cancel(); // 3. สั่งหยุดสั่นเผื่อไว้ในกรณีที่ผู้ใช้กดยกเลิกกลางคัน
+        Vibration.cancel(); 
         if (onCancel) onCancel();
     };
 
@@ -78,8 +87,9 @@ export default function SOSScreen({ onCancel }) {
                     isCounting ? styles.headerTop : styles.headerCenter
                 ]}>
                     <Text style={styles.headerTitle}>SOS ฉุกเฉิน</Text>
-                    <Text style={styles.subHeader}>สถานีตำรวจภูธรโพธิ์กลาง</Text>
-                    <Text style={styles.subHeader}>044 211 191</Text>
+                    {/* แสดงชื่อและเบอร์โทรที่รับค่ามา */}
+                    <Text style={styles.subHeader}>{contactName}</Text>
+                    <Text style={styles.subHeader}>{contactPhone}</Text>
                 </View>
 
                 <View style={styles.centerContent}>
@@ -134,7 +144,6 @@ export default function SOSScreen({ onCancel }) {
     );
 }
 
-// ... styles คงเดิมตามที่คุณเขียนไว้ทั้งหมด ...
 const styles = StyleSheet.create({
     container: {
         flex: 1,
