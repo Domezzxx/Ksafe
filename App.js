@@ -22,6 +22,7 @@ export default function App() {
   
   const [tempUserData, setTempUserData] = useState(null);
   const [resetPhone, setResetPhone] = useState(''); // เก็บเบอร์โทรศัพท์สำหรับ Reset รหัสผ่าน
+  const [globalContact, setGlobalContact] = useState({ name: 'สถานีตำรวจ', phone: '191' });
 
   const navigateTo = {
     home: () => setCurrentScreen('Home'),
