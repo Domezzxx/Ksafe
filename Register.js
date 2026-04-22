@@ -13,17 +13,9 @@ import {
     ActivityIndicator
 } from 'react-native';
 
-import { db } from './firebaseConfig';
-import { 
-    doc, 
-    runTransaction, 
-    Timestamp, 
-    collection, 
-    getDocs, 
-    query, 
-    orderBy, 
-    limit 
-} from 'firebase/firestore';
+import { db, auth } from './firebaseConfig';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc, Timestamp } from 'firebase/firestore';
 
 const Register = ({ onNext, onBack }) => {
     const [name, setName] = useState('');
@@ -38,27 +30,57 @@ const Register = ({ onNext, onBack }) => {
             return;
         }
 
-        // --- เริ่มต้นกระบวนการรัน ID และส่งข้อมูล ---
+        if (password.length < 6) {
+            Alert.alert('แจ้งเตือน', 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
+            return;
+        }
+
         setLoading(true);
         try {
-            // ดึงข้อมูล ID ล่าสุดมาเพื่อเตรียมความพร้อม (หรือจะไปรันในหน้า OTP ก็ได้)
-            // แต่ในโครงสร้างนี้เราจะส่งข้อมูลผู้ใช้ไปรอที่หน้า OTP ก่อน
-            
-            const userData = {
-                name: name,
-                phone: phone,
-                password: password
-            };
+            // 2. สร้าง Email จากเบอร์โทร เพื่อใช้กับ Firebase Auth
+            //    (Firebase Auth ต้องการ Email จึงสร้าง email จำลองจากเบอร์โทร)
+            const fakeEmail = `${phone}@ksafe.app`;
 
-            // 2. ส่งข้อมูลออกไปผ่าน props onNext เพื่อไปหน้า OTP
-            // หมายเหตุ: การบันทึก Firebase จริงๆ ควรเกิดขึ้นหลังจากยืนยัน OTP สำเร็จในหน้าถัดไป
+            // 3. สร้าง User ใน Firebase Authentication จริงๆ
+            const userCredential = await createUserWithEmailAndPassword(auth, fakeEmail, password);
+            const user = userCredential.user;
+
+            // 4. บันทึกข้อมูลโปรไฟล์ลง Firestore ในทันที
+            //    ProfileScreen.js จะดึงข้อมูลจากที่นี่เวลาล็อกอิน
+            await setDoc(doc(db, 'users', user.uid), {
+                firstName: name,
+                lastName: '',
+                phone: phone,
+                weight: '',
+                height: '',
+                birthDate: '01/01/2540',
+                gender: 'ไม่ระบุ',
+                bloodType: 'ไม่ทราบ',
+                organDonor: 'ฉันไม่ใช่ผู้บริจาคอวัยวะ',
+                aboutMe: 'ไม่มี',
+                address: '',
+                coordinate: { latitude: 14.8782, longitude: 102.0194 },
+                emergencyContact: { name: 'สถานีตำรวจ', phone: '191' },
+                profileImage: 'https://cdn-icons-png.flaticon.com/512/149/149071.png',
+                createdAt: Timestamp.now(),
+            });
+
+            // 5. ส่งข้อมูลไปหน้าถัดไป (OTP หรืออื่นๆ)
             if (onNext) {
-                onNext(userData);
+                onNext({ name, phone, password, uid: user.uid });
             }
 
         } catch (error) {
             console.error("Register Error: ", error);
-            Alert.alert('ผิดพลาด', 'เกิดข้อผิดพลาดในการเตรียมข้อมูล');
+
+            // แสดง Error ที่เข้าใจง่าย
+            if (error.code === 'auth/email-already-in-use') {
+                Alert.alert('แจ้งเตือน', 'เบอร์โทรนี้ถูกลงทะเบียนแล้ว กรุณาเข้าสู่ระบบ');
+            } else if (error.code === 'auth/weak-password') {
+                Alert.alert('แจ้งเตือน', 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
+            } else {
+                Alert.alert('ผิดพลาด', 'เกิดข้อผิดพลาดในการสมัครสมาชิก กรุณาลองใหม่');
+            }
         } finally {
             setLoading(false);
         }
@@ -105,7 +127,7 @@ const Register = ({ onNext, onBack }) => {
                         <Text style={styles.label}>รหัสผ่าน</Text>
                         <TextInput
                             style={styles.input}
-                            placeholder="กำหนดรหัสผ่าน"
+                            placeholder="กำหนดรหัสผ่าน (อย่างน้อย 6 ตัว)"
                             placeholderTextColor="#C0C0C0"
                             secureTextEntry={true}
                             value={password}
