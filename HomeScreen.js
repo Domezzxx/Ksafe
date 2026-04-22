@@ -12,7 +12,6 @@ import {
   Alert
 } from 'react-native';
 
-// เพิ่มการนำเข้า Location และ Firestore functions
 import * as Location from 'expo-location';
 import { collection, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "./firebaseConfig";
@@ -20,21 +19,18 @@ import { db } from "./firebaseConfig";
 const { width } = Dimensions.get('window');
 const cardWidth = (width - 50) / 2;
 
-// ฟังก์ชันสำหรับดึงพิกัด บันทึกลง Firebase และโทรออก
-const callNumber = async (phone, serviceTitle) => {
+// ฟังก์ชันโทรออก รับ reporterId (เบอร์คนล็อคอิน) เพิ่มเข้ามา
+const callNumber = async (phone, serviceTitle, reporterId) => {
   if (!phone) {
     Alert.alert("แจ้งเตือน", "ยังไม่มีเบอร์ติดต่อสำหรับบริการนี้ในระบบ");
     return;
   }
 
   try {
-    // 1. ขออนุญาตเข้าถึงตำแหน่ง
     let { status } = await Location.requestForegroundPermissionsAsync();
-
     let locationData = { latitude: null, longitude: null };
 
     if (status === 'granted') {
-      // 2. ดึงพิกัดปัจจุบัน (ใช้ accuracy ระดับต่ำเพื่อให้ดึงค่าได้ไว)
       const location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
@@ -42,38 +38,36 @@ const callNumber = async (phone, serviceTitle) => {
       locationData.longitude = location.coords.longitude;
     }
 
-    // 3. บันทึกข้อมูลพิกัดลงใน Collection "incident_reports"
     await addDoc(collection(db, "incident_reports"), {
       service_name: serviceTitle,
       phone_called: phone,
       latitude: locationData.latitude,
       longitude: locationData.longitude,
-      timestamp: serverTimestamp(), // เก็บเวลาที่กดโทร
+      reporter_id: reporterId || "ไม่ระบุตัวตน", // บันทึกเบอร์คนแจ้ง
+      timestamp: serverTimestamp(),
     });
 
   } catch (error) {
     console.error("Error saving location: ", error);
-    // แม้จะบันทึกพิกัดไม่ได้ แต่เราก็ยังปล่อยให้โทรออกได้เพื่อให้ผู้ใช้ปลอดภัย
   } finally {
-    // 4. ทำการโทรออก
     Linking.openURL(`tel:${phone}`).catch(() => {
       Alert.alert("เกิดข้อผิดพลาด", "ไม่สามารถโทรออกได้ในขณะนี้");
     });
   }
 };
 
-// --- ส่วนประกอบย่อย (ปรับแก้ให้ส่ง title เข้าไปในฟังก์ชันโทรด้วย) ---
+// --- ส่วนประกอบย่อย (ส่ง reporterId เข้าไปในฟังก์ชันโทร) ---
 
-const ServiceCard = ({ title, subtitle, icon, phone }) => (
-  <TouchableOpacity style={styles.serviceCard} onPress={() => callNumber(phone, title)}>
+const ServiceCard = ({ title, subtitle, icon, phone, reporterId }) => (
+  <TouchableOpacity style={styles.serviceCard} onPress={() => callNumber(phone, title, reporterId)}>
     <Image source={icon} style={styles.cardIcon} />
     <Text style={styles.serviceCardTitle}>{title}</Text>
     <Text style={styles.serviceCardSubtitle}>{subtitle}</Text>
   </TouchableOpacity>
 );
 
-const ContactItem = ({ title, subtitle, icon, phone }) => (
-  <TouchableOpacity style={styles.contactItem} onPress={() => callNumber(phone, title)}>
+const ContactItem = ({ title, subtitle, icon, phone, reporterId }) => (
+  <TouchableOpacity style={styles.contactItem} onPress={() => callNumber(phone, title, reporterId)}>
     <View style={styles.contactLeft}>
       <Image source={icon} style={styles.contactIcon} />
       <View style={styles.contactTextContainer}>
@@ -85,53 +79,79 @@ const ContactItem = ({ title, subtitle, icon, phone }) => (
   </TouchableOpacity>
 );
 
-// --- ส่วนเนื้อหาแต่ละหน้า --- (ใช้ dbData เหมือนเดิม)
-const EmergencyHome = ({ dbData }) => (
+// --- ส่วนเนื้อหาแต่ละหน้า ---
+
+const EmergencyHome = ({ dbData, reporterId }) => (
   <View style={styles.pageContent}>
     <View style={styles.grid}>
-      <ServiceCard title="สถานีตำรวจ" subtitle="แจ้งเหตุด่วนเหตุร้ายกับตำรวจ" icon={require('./assets/police.png')} phone={dbData["สถานีตำรวจ"]?.phone} />
-      <ServiceCard title="แพทย์ฉุกเฉิน" subtitle="บริการทางด้านสุขภาพ การส่งเสริม ป้องกัน รักษา และฟื้นฟูสภาวะความเจ็บป่วย" icon={require('./assets/hospital.png')} phone={dbData["แพทย์ฉุกเฉิน"]?.phone} />
-      <ServiceCard title="กู้ภัย กู้ชีพ" subtitle="อุบัติเหตุฉุกเฉิน เหตุเร่งด่วน" icon={require('./assets/rs.png')} phone={dbData["กู้ภัย กู้ชีพ"]?.phone} />
-      <ServiceCard title="เพลิงไหม้" subtitle="แจ้งเหตุเพลิงไหม้" icon={require('./assets/fire.png')} phone={dbData["เพลิงไหม้"]?.phone} />
+      <ServiceCard title="สถานีตำรวจ" subtitle="แจ้งเหตุด่วนเหตุร้ายกับตำรวจ" icon={require('./assets/police.png')} phone={dbData["สถานีตำรวจ"]?.phone} reporterId={reporterId} />
+      <ServiceCard title="แพทย์ฉุกเฉิน" subtitle="บริการทางด้านสุขภาพ การส่งเสริม ป้องกัน รักษา และฟื้นฟูสภาวะความเจ็บป่วย" icon={require('./assets/hospital.png')} phone={dbData["แพทย์ฉุกเฉิน"]?.phone} reporterId={reporterId} />
+      <ServiceCard title="กู้ภัย กู้ชีพ" subtitle="อุบัติเหตุฉุกเฉิน เหตุเร่งด่วน" icon={require('./assets/rs.png')} phone={dbData["กู้ภัย กู้ชีพ"]?.phone} reporterId={reporterId} />
+      <ServiceCard title="เพลิงไหม้" subtitle="แจ้งเหตุเพลิงไหม้" icon={require('./assets/fire.png')} phone={dbData["เพลิงไหม้"]?.phone} reporterId={reporterId} />
     </View>
     <Text style={styles.sectionTitle}>เบอร์ติดต่ออื่นๆ</Text>
-    <ContactItem title="สถานีตำรวจ" subtitle="แจ้งเหตุด่วนเหตุร้ายกับตำรวจ" icon={require('./assets/police.png')} phone={dbData["สถานีตำรวจ"]?.phone} />
-    <ContactItem title="โรงพยาบาล" subtitle="บริการทางด้านสุขภาพ" icon={require('./assets/hospital.png')} phone={dbData["โรงพยาบาล"]?.phone} />
-    <ContactItem title="กู้ภัย กู้ชีพ" subtitle="อุบัติเหตุฉุกเฉิน เหตุเร่งด่วน" icon={require('./assets/rs.png')} phone={dbData["กู้ภัย กู้ชีพ"]?.phone} />
-    <ContactItem title="เพลิงไหม้" subtitle="แจ้งเหตุเพลิงไหม้" icon={require('./assets/fire.png')} phone={dbData["เพลิงไหม้"]?.phone} />
-    <ContactItem title="การไฟฟ้าส่วนภูมิภาค" subtitle="จัดหาและจำหน่ายพลังงานไฟฟ้า" icon={require('./assets/phifa.png')} phone={dbData["การไฟฟ้าส่วนภูมิภาค"]?.phone} />
-    <ContactItem title="กรมการขนส่งทางบก" subtitle="ดูแล จัดระเบียบ พัฒนาระบบการขนส่งทางถนน" icon={require('./assets/khonsong.png')} phone={dbData["กรมการขนส่งทางบก"]?.phone} />
-    <ContactItem title="สายด่วนจราจร" subtitle="ขอความช่วยเหลือบนท้องถนนตลอด 24 ชั่วโมง " icon={require('./assets/jrajon.png')} phone={dbData["สายด่วนจราจร"]?.phone} />
-    <ContactItem title="กองปราบ" subtitle="สายด่วนแจ้งเหตุอาชญากรรมเป็นภัยต่อประเทศ " icon={require('./assets/kongparb.png')} phone={dbData["กองปราบ"]?.phone} />
-    <ContactItem title="ตำรวจท่องเที่ยว" subtitle="ดูแลแก่นักท่องเที่ยวทั้งชาวไทยและต่างชาติ " icon={require('./assets/thongtiaw.png')} phone={dbData["ตำรวจท่องเที่ยว"]?.phone} />
-    <ContactItem title="ศูนย์เตือนภัยพิบัติแห่งชาติ" subtitle="เฝ้าระวัง แจ้งเตือนภัยธรรมชาติล่วงหน้า " icon={require('./assets/ppb.png')} phone={dbData["ศูนย์เตือนภัยพิบัติแห่งชาติ"]?.phone} />
-    <ContactItem title="ร้องเรียนเรื่องรถโดยสารสาธารณะ" subtitle="ร้องเรียนรถโดยสารสาธารณะ (แท็กซี่, รถตู้, ประจำทาง) " icon={require('./assets/bus.png')} phone={dbData["ร้องเรียนเรื่องรถโดยสารสาธารณะ"]?.phone} />
+    <ContactItem title="สถานีตำรวจ" subtitle="แจ้งเหตุด่วนเหตุร้ายกับตำรวจ" icon={require('./assets/police.png')} phone={dbData["สถานีตำรวจ"]?.phone} reporterId={reporterId} />
+    <ContactItem title="โรงพยาบาล" subtitle="บริการทางด้านสุขภาพ" icon={require('./assets/hospital.png')} phone={dbData["โรงพยาบาล"]?.phone} reporterId={reporterId} />
+    <ContactItem title="กู้ภัย กู้ชีพ" subtitle="อุบัติเหตุฉุกเฉิน เหตุเร่งด่วน" icon={require('./assets/rs.png')} phone={dbData["กู้ภัย กู้ชีพ"]?.phone} reporterId={reporterId} />
+    <ContactItem title="เพลิงไหม้" subtitle="แจ้งเหตุเพลิงไหม้" icon={require('./assets/fire.png')} phone={dbData["เพลิงไหม้"]?.phone} reporterId={reporterId} />
+    <ContactItem title="การไฟฟ้าส่วนภูมิภาค" subtitle="จัดหาและจำหน่ายพลังงานไฟฟ้า" icon={require('./assets/phifa.png')} phone={dbData["การไฟฟ้าส่วนภูมิภาค"]?.phone} reporterId={reporterId} />
+    <ContactItem title="กรมการขนส่งทางบก" subtitle="ดูแล จัดระเบียบ พัฒนาระบบการขนส่งทางถนน" icon={require('./assets/khonsong.png')} phone={dbData["กรมการขนส่งทางบก"]?.phone} reporterId={reporterId} />
+    <ContactItem title="สายด่วนจราจร" subtitle="ขอความช่วยเหลือบนท้องถนนตลอด 24 ชั่วโมง " icon={require('./assets/jrajon.png')} phone={dbData["สายด่วนจราจร"]?.phone} reporterId={reporterId} />
+    <ContactItem title="กองปราบ" subtitle="สายด่วนแจ้งเหตุอาชญากรรมเป็นภัยต่อประเทศ " icon={require('./assets/kongparb.png')} phone={dbData["กองปราบ"]?.phone} reporterId={reporterId} />
+    <ContactItem title="ตำรวจท่องเที่ยว" subtitle="ดูแลแก่นักท่องเที่ยวทั้งชาวไทยและต่างชาติ " icon={require('./assets/thongtiaw.png')} phone={dbData["ตำรวจท่องเที่ยว"]?.phone} reporterId={reporterId} />
+    <ContactItem title="ศูนย์เตือนภัยพิบัติแห่งชาติ" subtitle="เฝ้าระวัง แจ้งเตือนภัยธรรมชาติล่วงหน้า " icon={require('./assets/ppb.png')} phone={dbData["ศูนย์เตือนภัยพิบัติแห่งชาติ"]?.phone} reporterId={reporterId} />
+    <ContactItem title="ร้องเรียนเรื่องรถโดยสารสาธารณะ" subtitle="ร้องเรียนรถโดยสารสาธารณะ (แท็กซี่, รถตู้, ประจำทาง) " icon={require('./assets/bus.png')} phone={dbData["ร้องเรียนเรื่องรถโดยสารสาธารณะ"]?.phone} reporterId={reporterId} />
   </View>
 );
 
-// --- หมายเหตุ: ส่วนหน้า MedicalHome, SafetyHome, UtilityHome ให้ใช้โครงสร้าง ServiceCard/ContactItem เหมือนด้านบนจะทำงานเหมือนกันอัตโนมัติ ---
-
-// ส่วน MedicalHome (ตัวอย่างการปรับแก้)
-const MedicalHome = ({ dbData }) => (
+const MedicalHome = ({ dbData, reporterId }) => (
   <View style={styles.pageContent}>
     <View style={styles.grid}>
-      <ServiceCard title="กู้ภัย กู้ชีพ" subtitle="อุบัติเหตุฉุกเฉิน เหตุเร่งด่วน" icon={require('./assets/rs.png')} phone={dbData["กู้ภัย กู้ชีพ"]?.phone} />
-      <ServiceCard title="แพทย์ฉุกเฉิน" subtitle="เหตุฉุกเฉินเหตุร้าย จากสายด่วนตรวจสอบ" icon={require('./assets/rp.png')} phone={dbData["แพทย์ฉุกเฉิน"]?.phone} />
-      <ServiceCard title="สายด่วนจราจร" subtitle="ขอความช่วยเหลือบนท้องถนนตลอด 24 ชั่วโมง" icon={require('./assets/saildung.png')} phone={dbData["สายด่วนจราจร"]?.phone} />
+      <ServiceCard title="กู้ภัย กู้ชีพ" subtitle="อุบัติเหตุฉุกเฉิน เหตุเร่งด่วน" icon={require('./assets/rs.png')} phone={dbData["กู้ภัย กู้ชีพ"]?.phone} reporterId={reporterId} />
+      <ServiceCard title="แพทย์ฉุกเฉิน" subtitle="เหตุฉุกเฉินเหตุร้าย จากสายด่วนตรวจสอบ" icon={require('./assets/rp.png')} phone={dbData["แพทย์ฉุกเฉิน"]?.phone} reporterId={reporterId} />
+      <ServiceCard title="สายด่วนจราจร" subtitle="ขอความช่วยเหลือบนท้องถนนตลอด 24 ชั่วโมง" icon={require('./assets/saildung.png')} phone={dbData["สายด่วนจราจร"]?.phone} reporterId={reporterId} />
     </View>
     <Text style={styles.sectionTitle}>เบอร์ติดต่ออื่นๆ</Text>
-    <ContactItem title="โรงพยาบาลมหาราชนครราชสีมา" subtitle="ศูนย์การแพทย์ชั้นนำระดับตติยภูมิของภาคอีสาน" icon={require('./assets/Maharat.png')} phone={dbData["โรงพยาบาลมหาราชนครราชสีมา"]?.phone} />
-    <ContactItem title="โรงพยาบาลกรุงเทพราชสีมา" subtitle="มาตรฐานบริการระดับสากล เพื่อสุขภาพที่ดีของคุณ" icon={require('./assets/kungthep.png')} phone={dbData["โรงพยาบาลกรุงเทพราชสีมา"]?.phone} />
-    <ContactItem title="แจ้งเหตุด่วน" subtitle="บริการปฐมภูมิเบื้องต้น เข้าถึงง่ายเพื่อชาว มทส. " icon={require('./assets/pcu.png')} phone={dbData["แจ้งเหตุด่วน"]?.phone} />
-    <ContactItem title="โรงพยาบาลราชสีมา ฮอสพิทอล" subtitle="รักษาครบวงจร สะดวกสบาย ใจกลางเมือง เข้าถึงง่ายเพื่อชาว มทส. " icon={require('./assets/rh.png')} phone={dbData["โรงพยาบาลราชสีมา ฮอสพิทอล"]?.phone} />
-    <ContactItem title="โรงพยาบาลมหาวิทยาลัยเทคโนโลยีสุรนารี" subtitle="นวัตกรรมการแพทย์ที่ทันสมัย เพื่อคุณภาพชีวิต" icon={require('./assets/suth.png')} phone={dbData["โรงพยาบาลมหาวิทยาลัยเทคโนโลยีสุรนารี"]?.phone} />
-    <ContactItem title="โรงพยาบาลริมลิฟวิ่ง" subtitle="ผู้เชี่ยวชาญด้านการฟื้นฟู และการดูแลผู้สูงอายุ เพื่อคุณภาพชีวิต" icon={require('./assets/rim.png')} phone={dbData["โรงพยาบาลริมลิฟวิ่ง"]?.phone} />
+    <ContactItem title="โรงพยาบาลมหาราชนครราชสีมา" subtitle="ศูนย์การแพทย์ชั้นนำระดับตติยภูมิของภาคอีสาน" icon={require('./assets/Maharat.png')} phone={dbData["โรงพยาบาลมหาราชนครราชสีมา"]?.phone} reporterId={reporterId} />
+    <ContactItem title="โรงพยาบาลกรุงเทพราชสีมา" subtitle="มาตรฐานบริการระดับสากล เพื่อสุขภาพที่ดีของคุณ" icon={require('./assets/kungthep.png')} phone={dbData["โรงพยาบาลกรุงเทพราชสีมา"]?.phone} reporterId={reporterId} />
+    <ContactItem title="แจ้งเหตุด่วน" subtitle="บริการปฐมภูมิเบื้องต้น เข้าถึงง่ายเพื่อชาว มทส. " icon={require('./assets/pcu.png')} phone={dbData["แจ้งเหตุด่วน"]?.phone} reporterId={reporterId} />
+    <ContactItem title="โรงพยาบาลราชสีมา ฮอสพิทอล" subtitle="รักษาครบวงจร สะดวกสบาย ใจกลางเมือง เข้าถึงง่ายเพื่อชาว มทส. " icon={require('./assets/rh.png')} phone={dbData["โรงพยาบาลราชสีมา ฮอสพิทอล"]?.phone} reporterId={reporterId} />
+    <ContactItem title="โรงพยาบาลมหาวิทยาลัยเทคโนโลยีสุรนารี" subtitle="นวัตกรรมการแพทย์ที่ทันสมัย เพื่อคุณภาพชีวิต" icon={require('./assets/suth.png')} phone={dbData["โรงพยาบาลมหาวิทยาลัยเทคโนโลยีสุรนารี"]?.phone} reporterId={reporterId} />
+    <ContactItem title="โรงพยาบาลริมลิฟวิ่ง" subtitle="ผู้เชี่ยวชาญด้านการฟื้นฟู และการดูแลผู้สูงอายุ เพื่อคุณภาพชีวิต" icon={require('./assets/rim.png')} phone={dbData["โรงพยาบาลริมลิฟวิ่ง"]?.phone} reporterId={reporterId} />
   </View>
 );
 
-// --- หน้าจอหลัก DashboardScreen (ส่วน useEffect และ renderContent ยังเหมือนเดิม) ---
+const SafetyHome = ({ dbData, reporterId }) => (
+  <View style={styles.pageContent}>
+    <View style={styles.grid}>
+      <ServiceCard title="กู้ภัย กู้ชีพ" subtitle="อุบัติเหตุฉุกเฉิน เหตุเร่งด่วน" icon={require('./assets/rs.png')} phone={dbData["กู้ภัย กู้ชีพ"]?.phone} reporterId={reporterId} />
+      <ServiceCard title="แพทย์ฉุกเฉิน" subtitle="เหตุฉุกเฉินเหตุร้าย จากสายด่วนตรวจสอบ" icon={require('./assets/rp.png')} phone={dbData["แพทย์ฉุกเฉิน"]?.phone} reporterId={reporterId} />
+    </View>
+    <Text style={styles.sectionTitle}>เบอร์ติดต่ออื่นๆ</Text>
+    <ContactItem title="สถานีตำรวจภูธรโพธิ์กลาง" subtitle="พิทักษ์สันติราษฎร์ด้วยใจ พร้อมรับใช้ประชาชนชาวโคราช" icon={require('./assets/poograng.png')} phone={dbData["สถานีตำรวจภูธรโพธิ์กลาง"]?.phone} reporterId={reporterId} />
+    <ContactItem title="สถานีตำรวจภูธรนครราชสีมา" subtitle="ศูนย์รวมความปลอดภัย ใส่ใจทุกการบริการ มาตรฐานสากลเพื่อชาวโคราช" icon={require('./assets/poothonpolice.png')} phone={dbData["สถานีตำรวจภูธรนครราชสีมา"]?.phone} reporterId={reporterId} />
+  </View>
+);
 
-export default function DashboardScreen({ onGoHome, onGoSOS, onGoSearch, onGoProfile }) {
+const UtilityHome = ({ dbData, reporterId }) => (
+  <View style={styles.pageContent}>
+    <View style={styles.grid}>
+      <ServiceCard title="การไฟฟ้าส่วนภูมิภาค" subtitle="จัดหาและจำหน่ายพลังงานไฟฟ้า" icon={require('./assets/phifa.png')} phone={dbData["การไฟฟ้าส่วนภูมิภาค"]?.phone} reporterId={reporterId} />
+      <ServiceCard title="กองปราบ" subtitle="สายด่วนแจ้งเหตุอาชญากรรมเป็นภัยต่อประเทศ" icon={require('./assets/kongparb.png')} phone={dbData["กองปราบ"]?.phone} reporterId={reporterId} />
+      <ServiceCard title="ตำรวจท่องเที่ยว" subtitle="ดูแลแก่นักท่องเที่ยวทั้งชาวไทยและต่างชาติ" icon={require('./assets/thongtiaw.png')} phone={dbData["ตำรวจท่องเที่ยว"]?.phone} reporterId={reporterId} />
+      <ServiceCard title="ศูนย์เตือนภัยพิบัติแห่งชาติ" subtitle="เฝ้าระวัง แจ้งเตือนภัยธรรมชาติล่วงหน้า " icon={require('./assets/ppb.png')} phone={dbData["ศูนย์เตือนภัยพิบัติแห่งชาติ"]?.phone} reporterId={reporterId} />
+    </View>
+    <Text style={styles.sectionTitle}>เบอร์ติดต่ออื่นๆ</Text>
+    <ContactItem title="การไฟฟ้าส่วนภูมิภาคเขต 3" subtitle="มาตรฐานบริการด้านพลังงาน สร้างสรรค์ความสว่างไสวให้ภูมิภาค" icon={require('./assets/phifa.png')} phone={dbData["การไฟฟ้าส่วนภูมิภาคเขต 3"]?.phone} reporterId={reporterId} />
+    <ContactItem title="ชมรมจิตอาสาแสดทอง " subtitle="พลังแห่งการแบ่งปัน สร้างสรรค์ความสุขเพื่อสังคม" icon={require('./assets/sutv.png')} phone={dbData["ชมรมจิตอาสาแสดทอง "]?.phone} reporterId={reporterId} />
+    <ContactItem title="ศูนย์กู้ภัยฮุก 31 " subtitle="บรรเทาสาธารณภัย มั่นใจในการบริการเคียงข้างทุกข์สุขชาวนครราชสีมา" icon={require('./assets/huk.png')} phone={dbData["ศูนย์กู้ภัยฮุก 31 "]?.phone} reporterId={reporterId} />
+    <ContactItem title="สำนักงานกรมทางหลวงที่ 10 นครราชสีมา " subtitle="ประตูสู่เส้นทางที่ปลอดภัย พัฒนาโครงข่ายเพื่อความสะดวกของคนไทย" icon={require('./assets/sumnak.png')} phone={dbData["สำนักงานกรมทางหลวงที่ 10 นครราชสีมา "]?.phone} reporterId={reporterId} />
+  </View>
+);
+
+// --- หน้าจอหลัก DashboardScreen (รับ currentUserPhone เพิ่มเข้ามา) ---
+
+export default function DashboardScreen({ onGoHome, onGoSOS, onGoSearch, onGoProfile, currentUserPhone }) {
   const [activeTab, setActiveTab] = useState(0);
   const [dbData, setDbData] = useState({});
   const tabs = ['เหตุด่วน', 'การแพทย์', 'ความปลอดภัย', 'สาธารณูปโภค'];
@@ -157,10 +177,11 @@ export default function DashboardScreen({ onGoHome, onGoSOS, onGoSearch, onGoPro
 
   const renderContent = () => {
     switch (activeTab) {
-      case 0: return <EmergencyHome dbData={dbData} />;
-      case 1: return <MedicalHome dbData={dbData} />;
-      // case 2 และ 3 ก็ส่ง dbData เข้าไปเหมือนกันครับ...
-      default: return <EmergencyHome dbData={dbData} />;
+      case 0: return <EmergencyHome dbData={dbData} reporterId={currentUserPhone} />;
+      case 1: return <MedicalHome dbData={dbData} reporterId={currentUserPhone} />;
+      case 2: return <SafetyHome dbData={dbData} reporterId={currentUserPhone} />;
+      case 3: return <UtilityHome dbData={dbData} reporterId={currentUserPhone} />;
+      default: return <EmergencyHome dbData={dbData} reporterId={currentUserPhone} />;
     }
   };
 
@@ -185,7 +206,6 @@ export default function DashboardScreen({ onGoHome, onGoSOS, onGoSearch, onGoPro
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* Footer เหมือนเดิม */}
       <View style={styles.footer}>
         <TouchableOpacity style={styles.footerButton} onPress={onGoHome}>
           <Image source={require('./assets/home (2).png')} style={[styles.footerIcon, { tintColor: '#F87C47' }]} />
