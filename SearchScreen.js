@@ -1,81 +1,50 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
-  FlatList
+  FlatList,
+  ActivityIndicator
 } from 'react-native';
 
-const categories = [
-  'ทั้งหมด',
-  'โรงพยาบาล',
-  'สถานีตำรวจ',
-  'กู้ภัย',
-  'สถานีดับเพลิง'
-];
+// ตรวจสอบชื่อไฟล์ config ของคุณ
+import { db } from './firebaseConfig'; 
+import { collection, onSnapshot, query } from 'firebase/firestore';
 
-export const HOSPITAL_DATA = [
-  {
-    id: '1',
-    name: 'รพ.มทส. (อาคารรัตนเวชพัฒน์)',
-    type: 'โรงพยาบาล', // 💡 แนะนำให้เพิ่ม type เข้าไปด้วยเพื่อให้กด Filter หมวดหมู่ได้
-    address: '111 หมู่ที่ 6 ถนน มหาวิทยาลัย...',
-    latitude: 14.86407184979161,
-    longitude: 102.03567048715242, 
-    phone: '044 376 555',
-    distance: 'ห่างไป 2 กม.',
-  },
-  {
-    id: '2',
-    name: 'สถานีดับเพลิงสุรนารายณ์',
-    type: 'สถานีดับเพลิง', // 💡 เพิ่ม type
-    address: '80 ถนนสุรนารายณ์ ต.ในเมือง...',
-    latitude: 14.981622812371958, 
-    longitude: 102.1090519035791,
-    phone: '044 255 026',
-    distance: 'ห่างไป 5 กม.',
-  },
-  {
-    id: '3',
-    name: 'สถานีตำรวจบางนา',
-    type: 'สถานีตำรวจ',
-    address: 'ถนนบางนา กรุงเทพฯ',
-    distance: '1.2 กิโลเมตร'
-  },
-  {
-    id: '4',
-    name: 'สถานีตำรวจปทุมวัน',
-    type: 'สถานีตำรวจ',
-    address: 'ถนนพระราม 1 กรุงเทพฯ',
-    distance: '3 กิโลเมตร'
-  },
-  {
-    id: '5',
-    name: 'มูลนิธิกู้ภัยร่วมกตัญญู',
-    type: 'กู้ภัย',
-    address: 'สมุทรปราการ',
-    distance: '4 กิโลเมตร'
-  },
-  {
-    id: '6',
-    name: 'สถานีดับเพลิงบางรัก',
-    type: 'สถานีดับเพลิง',
-    address: 'ถนนเจริญกรุง กรุงเทพฯ',
-    distance: '2.5 กิโลเมตร'
-  }
-];
+const categories = ['ทั้งหมด', 'โรงพยาบาล', 'สถานีตำรวจ', 'กู้ภัย', 'สถานีดับเพลิง'];
 
 export default function SearchScreen({ onBack, goToDetail }) {
   const [searchText, setSearchText] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ทั้งหมด');
+  const [locations, setLocations] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // 💡 แก้ไขจาก data เป็น HOSPITAL_DATA
-  const filteredData = HOSPITAL_DATA.filter(item => {
+  useEffect(() => {
+    const q = query(collection(db, 'facilities'));
+    
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const dataList = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      console.log("Data from Firebase:", dataList); // เพิ่ม log เพื่อเช็คข้อมูลใน console
+      setLocations(dataList);
+      setLoading(false);
+    }, (error) => {
+      console.error("Firebase Error: ", error);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // 💡 แก้ไข Filter ให้ตรงกับฟิลด์ "ประเภท" และ "ชื่อ" ใน Firebase
+  const filteredData = locations.filter(item => {
     const matchCategory =
-      selectedCategory === 'ทั้งหมด' || item.type === selectedCategory;
+      selectedCategory === 'ทั้งหมด' || item.ประเภท === selectedCategory;
 
-    const matchText = item.name
+    const matchText = (item.ชื่อ || '')
       .toLowerCase()
       .includes(searchText.toLowerCase().trim());
 
@@ -84,128 +53,80 @@ export default function SearchScreen({ onBack, goToDetail }) {
 
   return (
     <View style={{ flex: 1, padding: 16, backgroundColor: '#fff' }}>
-
-      {/* 🔙 กลับ */}
+      
+      {/* ส่วนหัว และ ช่องค้นหา */}
       <TouchableOpacity onPress={onBack} style={{ marginTop: 40, paddingVertical: 5 }}>
         <Text style={{ fontSize: 18 }}>← กลับ</Text>
       </TouchableOpacity>
 
-      {/* 🔍 ค้นหา */}
       <TextInput
         placeholder="ค้นหาสถานที่..."
         value={searchText}
-        onChangeText={(text) => setSearchText(text)}
+        onChangeText={setSearchText}
         style={{
-          borderWidth: 1,
-          borderColor: '#ddd',
-          borderRadius: 12,
-          padding: 12,
-          marginVertical: 15
+          borderWidth: 1, borderColor: '#ddd', borderRadius: 12,
+          padding: 12, marginVertical: 15
         }}
       />
 
       {/* 📂 หมวดหมู่ */}
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 10 }}>
         {categories.map((cat) => (
           <TouchableOpacity
             key={cat}
             onPress={() => setSelectedCategory(cat)}
             style={{
-              paddingHorizontal: 12,
-              paddingVertical: 8,
-              margin: 5,
-              borderRadius: 20,
-              backgroundColor:
-                selectedCategory === cat ? '#ff7a00' : '#eee'
+              paddingHorizontal: 12, paddingVertical: 8, margin: 5, borderRadius: 20,
+              backgroundColor: selectedCategory === cat ? '#ff7a00' : '#eee'
             }}
           >
-            <Text
-              style={{
-                // 💡 แก้ไขลบลูกน้ำ (,) ที่เกินมาออกให้แล้ว
-                color: selectedCategory === cat ? '#fff' : '#333'
-              }}
-            >
-              {cat}
-            </Text>
+            <Text style={{ color: selectedCategory === cat ? '#fff' : '#333' }}>{cat}</Text>
           </TouchableOpacity>
         ))}
       </View>
 
-      {/* 📋 รายการ */}
-      <FlatList
-        data={filteredData}
-        keyExtractor={(item) => item.id}
-        showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => (
-          <View
-            style={{
-              backgroundColor: '#f2f2f2',
-              padding: 15,
-              borderRadius: 16,
-              marginBottom: 12,
-              marginTop: 1
-            }}
-          >
-            {/* 🔹 แถวบน */}
+      {/* 📋 รายการสถานที่ */}
+      {loading ? (
+        <ActivityIndicator size="large" color="#ff7a00" style={{ marginTop: 50 }} />
+      ) : (
+        <FlatList
+          data={filteredData}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
             <View style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'center'
+              backgroundColor: '#f2f2f2', padding: 15, borderRadius: 16, marginBottom: 12
             }}>
-              <Text
-                style={{
-                  fontSize: 16,
-                  fontWeight: 'bold',
-                  flex: 1,
-                  paddingRight: 10
-                }}
-                numberOfLines={2}
-              >
-                {item.name}
-              </Text>
-
-              <Text style={{ color: '#666', fontSize: 13 }}>
-                {item.distance}
-              </Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                {/* 💡 เปลี่ยนจาก item.name เป็น item.ชื่อ */}
+                <Text style={{ fontSize: 16, fontWeight: 'bold', flex: 1 }}>
+                  {item.ชื่อ}
+                </Text>
+                <Text style={{ color: '#666', fontSize: 13 }}>2 กิโลเมตร</Text>
+              </View>
+              
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 }}>
+                {/* 💡 เปลี่ยนจาก item.address เป็น item.ที่อยู่ */}
+                <Text style={{ color: '#888', fontSize: 13, flex: 1 }} numberOfLines={2}>
+                  {item.ที่อยู่}
+                </Text>
+                
+                <TouchableOpacity
+                  onPress={() => goToDetail(item)}
+                  style={{
+                    width: 28, height: 28, borderRadius: 14, borderWidth: 1,
+                    borderColor: '#999', justifyContent: 'center', alignItems: 'center'
+                  }}
+                >
+                  <Text style={{ fontSize: 14 }}>i</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-
-            {/* 🔹 แถวล่าง */}
-            <View style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginTop: 6
-            }}>
-              <Text
-                style={{
-                  color: '#888',
-                  fontSize: 13,
-                  flex: 1,
-                  paddingRight: 10
-                }}
-                numberOfLines={2}
-              >
-                {item.address}
-              </Text>
-
-              <TouchableOpacity
-                onPress={() => goToDetail(item)}
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: 14,
-                  borderWidth: 1,
-                  borderColor: '#999',
-                  justifyContent: 'center',
-                  alignItems: 'center'
-                }}
-              >
-                <Text style={{ fontSize: 14 }}>i</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-      />
+          )}
+          ListEmptyComponent={
+            <Text style={{ textAlign: 'center', marginTop: 20 }}>ไม่พบข้อมูล</Text>
+          }
+        />
+      )}
     </View>
   );
 }
