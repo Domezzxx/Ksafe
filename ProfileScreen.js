@@ -5,8 +5,9 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import MapView, { Marker } from 'react-native-maps';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
+import { getAuth, signOut } from 'firebase/auth';
 
-export default function ProfileScreen({ onGoHome, onGoSOS, onGoSearch, onGoProfile }) {
+export default function ProfileScreen({ onGoHome, onGoSOS, onGoSearch, onGoProfile, onLogout }) {
   const [isEditing, setIsEditing] = useState(false);
   const [showEmergencyModal, setShowEmergencyModal] = useState(false);
   const [showPickerModal, setShowPickerModal] = useState(false);
@@ -23,7 +24,7 @@ export default function ProfileScreen({ onGoHome, onGoSOS, onGoSearch, onGoProfi
     phone: '099-999-9999',
     weight: '60',
     height: '200',
-    birthDate: '31/11/2549', // แก้ไขปีให้สมจริงเพื่อคำนวณอายุ
+    birthDate: '31/11/2549',
     gender: 'ชาย',
     bloodType: 'A',
     organDonor: 'ฉันไม่ใช่ผู้บริจาคอวัยวะ',
@@ -33,6 +34,21 @@ export default function ProfileScreen({ onGoHome, onGoSOS, onGoSearch, onGoProfi
     emergencyContact: { name: 'สถานีตำรวจ', phone: '191' },
     profileImage: 'https://cdn-icons-png.flaticon.com/512/149/149071.png'
   });
+
+  // --- ฟังก์ชัน Logout ---
+  const handleLogout = () => {
+    const auth = getAuth();
+    signOut(auth)
+      .then(() => {
+        if (onLogout) {
+          onLogout();
+        }
+      })
+      .catch((error) => {
+        console.error("เกิดข้อผิดพลาดในการออกจากระบบ:", error);
+        alert("ไม่สามารถออกจากระบบได้ กรุณาลองใหม่อีกครั้ง");
+      });
+  };
 
   // --- ฟังก์ชันคำนวณอายุจาก birthDate (DD/MM/YYYY พ.ศ.) ---
   const calculateAge = (bDate) => {
@@ -278,7 +294,20 @@ export default function ProfileScreen({ onGoHome, onGoSOS, onGoSearch, onGoProfi
             </View>
             <Ionicons name="chevron-forward" size={20} color="#ccc" />
           </TouchableOpacity>
-          <View style={{ height: 100 }} /> 
+
+          {/* --- ปุ่มออกจากระบบ --- */}
+          <TouchableOpacity
+            style={[styles.actionCard, { borderColor: '#FF3B30', backgroundColor: '#FFF0F0' }]}
+            onPress={handleLogout}
+          >
+            <Ionicons name="log-out-outline" size={24} color="#FF3B30" />
+            <View style={{ marginLeft: 15, flex: 1 }}>
+              <Text style={[styles.actionTitle, { color: '#FF3B30' }]}>ออกจากระบบ</Text>
+              <Text style={[styles.actionSub, { color: '#FF8A8A' }]}>กลับสู่หน้าเข้าสู่ระบบ</Text>
+            </View>
+          </TouchableOpacity>
+
+          <View style={{ height: 100 }} />
         </ScrollView>
       )}
 
@@ -366,7 +395,7 @@ export default function ProfileScreen({ onGoHome, onGoSOS, onGoSearch, onGoProfi
         </SafeAreaView>
       </Modal>
 
-      {/* --- 3. Footer (ย้ายมาไว้ข้างใน View หลัก) --- */}
+      {/* --- 3. Footer --- */}
       <View style={styles.footer}>
         <TouchableOpacity style={styles.footerButton} onPress={onGoHome}>
           <Image source={require('./assets/home (2).png')} style={[styles.footerIcon, { tintColor: '#929292' }]} />
@@ -385,7 +414,7 @@ export default function ProfileScreen({ onGoHome, onGoSOS, onGoSearch, onGoProfi
   );
 }
 
-// --- Styles (คงเดิมตามที่คุณออกแบบไว้) ---
+// --- Styles ---
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, paddingTop: 50 },
   headerContainerView: { flexDirection: 'row', alignItems: 'center', marginBottom: 25 },
