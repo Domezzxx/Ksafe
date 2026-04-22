@@ -19,7 +19,6 @@ import { db } from "./firebaseConfig";
 const { width } = Dimensions.get('window');
 const cardWidth = (width - 50) / 2;
 
-// ฟังก์ชันโทรออก รับ reporterId (เบอร์คนล็อคอิน) เพิ่มเข้ามา
 const callNumber = async (phone, serviceTitle, reporterId) => {
   if (!phone) {
     Alert.alert("แจ้งเตือน", "ยังไม่มีเบอร์ติดต่อสำหรับบริการนี้ในระบบ");
@@ -43,7 +42,7 @@ const callNumber = async (phone, serviceTitle, reporterId) => {
       phone_called: phone,
       latitude: locationData.latitude,
       longitude: locationData.longitude,
-      reporter_id: reporterId || "ไม่ระบุตัวตน", // บันทึกเบอร์คนแจ้ง
+      reporter_id: reporterId || "ไม่ระบุตัวตน",
       timestamp: serverTimestamp(),
     });
 
@@ -55,8 +54,6 @@ const callNumber = async (phone, serviceTitle, reporterId) => {
     });
   }
 };
-
-// --- ส่วนประกอบย่อย (ส่ง reporterId เข้าไปในฟังก์ชันโทร) ---
 
 const ServiceCard = ({ title, subtitle, icon, phone, reporterId }) => (
   <TouchableOpacity style={styles.serviceCard} onPress={() => callNumber(phone, title, reporterId)}>
@@ -78,8 +75,6 @@ const ContactItem = ({ title, subtitle, icon, phone, reporterId }) => (
     <Image source={require('./assets/telephone.png')} style={styles.phoneIcon} />
   </TouchableOpacity>
 );
-
-// --- ส่วนเนื้อหาแต่ละหน้า ---
 
 const EmergencyHome = ({ dbData, reporterId }) => (
   <View style={styles.pageContent}>
@@ -149,8 +144,6 @@ const UtilityHome = ({ dbData, reporterId }) => (
   </View>
 );
 
-// --- หน้าจอหลัก DashboardScreen (รับ currentUserPhone เพิ่มเข้ามา) ---
-
 export default function DashboardScreen({ onGoHome, onGoSOS, onGoSearch, onGoProfile, currentUserPhone }) {
   const [activeTab, setActiveTab] = useState(0);
   const [dbData, setDbData] = useState({});
@@ -164,7 +157,9 @@ export default function DashboardScreen({ onGoHome, onGoSOS, onGoSearch, onGoPro
         querySnapshot.forEach((doc) => {
           const data = doc.data();
           if (data.title) {
-            dataObj[data.title] = { phone: data.phone };
+            dataObj[data.title] = {
+              phone: data.phone
+            };
           }
         });
         setDbData(dataObj);
