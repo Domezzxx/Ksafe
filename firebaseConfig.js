@@ -1,6 +1,7 @@
-import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore"; 
-import { getAuth } from "firebase/auth"; // 💡 เพิ่มบรรทัดนี้
+import { initializeApp, getApps, getApp } from "firebase/app";
+import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
+import { getAuth } from "firebase/auth"; // นำเข้า Auth เพิ่มเติม
 
 const firebaseConfig = {
   apiKey: "AIzaSyB937hfvZjrN0lMax8f2MGSOxuM7VUegrE",
@@ -13,9 +14,12 @@ const firebaseConfig = {
   measurementId: "G-9FRHXPPW3X"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+// เช็คว่ามีแอปเดิมอยู่ไหม ถ้าไม่มีค่อยสร้างใหม่ (ป้องกัน Error "Firebase: App named '[DEFAULT]' already exists")
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
-// 💡 สร้างตัวแปร db และ auth ส่งออกไปใช้งานในหน้าอื่นๆ
+// ส่งออกตัวแปรเพื่อให้ไฟล์อื่นๆ นำไปใช้งานได้
 export const db = getFirestore(app);
-export const auth = getAuth(app);
+export const storage = getStorage(app);
+export const auth = getAuth(app); // สำหรับระบบ Login / Register
+
+export default app;
