@@ -147,18 +147,19 @@ export default function App() {
   }
 
   if (currentScreen === 'Map') {
-    return (
-      <MapScreen 
-        onBack={() => setCurrentScreen('Detail')} 
-        destinationName={selectedPlace?.name} 
-        destinationCoords={{
-          latitude: selectedPlace?.latitude,
-          longitude: selectedPlace?.longitude
-        }}
-      />
-    );
-  }
-
+  return (
+    <MapScreen 
+      onBack={() => setCurrentScreen('Detail')} 
+      // เปลี่ยนจาก .name เป็น .ชื่อ ตาม Firebase
+      destinationName={selectedPlace?.ชื่อ || "จุดหมายปลายทาง"} 
+      // เปลี่ยนจาก .latitude เป็น .พิกัด.latitude ตามโครงสร้าง GeoPoint
+      destinationCoords={{
+        latitude: selectedPlace?.พิกัด?.latitude,
+        longitude: selectedPlace?.พิกัด?.longitude
+      }}
+    />
+  );
+}
   if (currentScreen === 'SOS') {
     return (
       <SosScreen 
