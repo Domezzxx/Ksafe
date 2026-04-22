@@ -1,5 +1,6 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore"; // 💡 เพิ่มการนำเข้า Firestore
+import { getFirestore } from "firebase/firestore"; 
+import { getAuth } from "firebase/auth"; // 💡 เพิ่มบรรทัดนี้
 
 const firebaseConfig = {
   apiKey: "AIzaSyB937hfvZjrN0lMax8f2MGSOxuM7VUegrE",
@@ -15,5 +16,6 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// 💡 สร้างตัวแปร db และ export ออกไปใช้งาน
+// 💡 สร้างตัวแปร db และ auth ส่งออกไปใช้งานในหน้าอื่นๆ
 export const db = getFirestore(app);
+export const auth = getAuth(app);
