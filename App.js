@@ -15,6 +15,7 @@ import ResetPassword from './ResetPassword';
 import ProfileScreen from './ProfileScreen';
 import MapScreen from './MapScreen';
 import AdminHomeScreen from './AdminHomeScreen';
+import ManageContactScreen from './ManageContactScreen';
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState('Welcome1');
@@ -22,14 +23,15 @@ export default function App() {
   
   const [tempUserData, setTempUserData] = useState(null);
   const [resetPhone, setResetPhone] = useState(''); // เก็บเบอร์โทรศัพท์สำหรับ Reset รหัสผ่าน
-  const [globalContact, setGlobalContact] = useState({ name: 'สถานีตำรวจ', phone: '191' });
-  
+  const [globalContact, setGlobalContact] = useState({ name: 'สถานีตำรวจ', phone: '191' }); // จากโค้ดที่ 2
+
   const navigateTo = {
     home: () => setCurrentScreen('Home'),
     sos: () => setCurrentScreen('SOS'),
     search: () => setCurrentScreen('Search'),
     profile: () => setCurrentScreen('Profile'),
     admin: () => setCurrentScreen('AdminHome'),
+    manageContact: () => setCurrentScreen('ManageContact'), 
   };
 
   // --- Welcome Screens ---
@@ -100,9 +102,9 @@ export default function App() {
   if (currentScreen === 'ResetPassword') {
     return (
       <ResetPassword 
-        phone={resetPhone} // ส่งเบอร์โทรศัพท์ไป Query ใน Firebase
+        phone={resetPhone} 
         onNext={() => {
-          setResetPhone(''); // ล้างค่าเบอร์หลังเสร็จ
+          setResetPhone(''); 
           setCurrentScreen('Login');
         }} 
         onBack={() => setCurrentScreen('ForgotOTP')} 
@@ -115,6 +117,20 @@ export default function App() {
     return (
       <AdminHomeScreen 
         onLogout={() => setCurrentScreen('Login')}
+        onGoHome={navigateTo.admin}
+        onGoSOS={navigateTo.manageContact} 
+        onGoSearch={navigateTo.manageContact} 
+        onGoProfile={navigateTo.profile}
+      />
+    );
+  }
+
+  if (currentScreen === 'ManageContact') {
+    return (
+      <ManageContactScreen 
+        onGoHome={navigateTo.admin}
+        onGoSOS={navigateTo.manageContact}
+        onGoSearch={navigateTo.manageContact}
         onGoProfile={navigateTo.profile}
       />
     );
@@ -148,19 +164,18 @@ export default function App() {
   }
 
   if (currentScreen === 'Map') {
-  return (
-    <MapScreen 
-      onBack={() => setCurrentScreen('Detail')} 
-      // เปลี่ยนจาก .name เป็น .ชื่อ ตาม Firebase
-      destinationName={selectedPlace?.ชื่อ || "จุดหมายปลายทาง"} 
-      // เปลี่ยนจาก .latitude เป็น .พิกัด.latitude ตามโครงสร้าง GeoPoint
-      destinationCoords={{
-        latitude: selectedPlace?.พิกัด?.latitude,
-        longitude: selectedPlace?.พิกัด?.longitude
-      }}
-    />
-  );
-}
+    return (
+      <MapScreen 
+        onBack={() => setCurrentScreen('Detail')} 
+        destinationName={selectedPlace?.ชื่อ || "จุดหมายปลายทาง"} 
+        destinationCoords={{
+          latitude: selectedPlace?.พิกัด?.latitude,
+          longitude: selectedPlace?.พิกัด?.longitude
+        }}
+      />
+    );
+  }
+
   if (currentScreen === 'SOS') {
     return (
       <SosScreen 
@@ -184,7 +199,7 @@ export default function App() {
     );
   }
 
-  // Default: Home Screen
+  // Default: Home Screen (User)
   return (
     <HomeScreen 
       onGoHome={navigateTo.home}
