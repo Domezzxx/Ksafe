@@ -1,26 +1,29 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, SafeAreaView, KeyboardAvoidingView, Platform, Image,
-  Alert, ActivityIndicator // 💡 เพิ่ม Alert และ ActivityIndicator
+  StyleSheet, SafeAreaView, KeyboardAvoidingView, Platform, Image
 } from 'react-native';
 
-// 💡 เพิ่มการนำเข้า Firebase
-import { db } from './firebaseConfig';
-import { 
-    doc, runTransaction, Timestamp, collection, getDocs, query, orderBy, limit 
-} from 'firebase/firestore';
-
-export default function OtpScreen({ onVerify, onBack, userData }) { // 💡 รับ userData เพิ่ม
-  const [otp, setOtp] = useState(['', '', '', '']);
-  const [loading, setLoading] = useState(false); // 💡 สถานะโหลด
+export default function OtpScreen({ onVerify, onBack }) {
+  const [otp, setOtp] = useState(['', '', '', '', '', '']); 
   const inputs = useRef([]);
+  
+  // --- ส่วนที่เพิ่มใหม่สำหรับโหมดจำลอง In-app Notification ---
+  const [showNotif, setShowNotif] = useState(false);
+  const [mockOtpCode, setMockOtpCode] = useState('');
+
+  // สุ่มรหัส OTP 6 หลักทันทีที่เปิดหน้านี้ขึ้นมา
+  useEffect(() => {
+    const randomOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    setMockOtpCode(randomOtp);
+  }, []);
+  // ----------------------------------------------------
 
   const handleChange = (text, index) => {
     const newOtp = [...otp];
     newOtp[index] = text;
     setOtp(newOtp);
-    if (text && index < 3) {
+    if (text && index < 5) {
       inputs.current[index + 1].focus();
     }
   };
@@ -31,63 +34,6 @@ export default function OtpScreen({ onVerify, onBack, userData }) { // 💡 ร�
     }
   };
 
-  // 💡 ฟังก์ชันจัดการการยืนยันและบันทึกข้อมูล
-  const handleVerify = async () => {
-    const otpCode = otp.join('');
-    if (otpCode.length < 4) {
-      Alert.alert('แจ้งเตือน', 'กรุณากรอกรหัส OTP ให้ครบถ้วน');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      // 1. หาเลข ID ล่าสุดจากตาราง users
-      const usersRef = collection(db, "users");
-      const q = query(usersRef, orderBy("user_id", "desc"), limit(1));
-      const querySnapshot = await getDocs(q);
-      
-      let lastId = 0;
-      if (!querySnapshot.empty) {
-        lastId = querySnapshot.docs[0].data().user_id;
-      }
-      
-      const newId = lastId + 1;
-      const userIdString = String(newId);
-
-      // 2. ใช้ Transaction บันทึกข้อมูลที่ส่งมาจากหน้า Register
-      await runTransaction(db, async (transaction) => {
-        const userRef = doc(db, "users", userIdString);
-        
-        transaction.set(userRef, {
-          user_id: newId, 
-          first_name: userData?.name || "Unknown",
-          last_name: "",         
-          phone_number: userData?.phone || "",
-          Password: userData?.password || "",
-          role: 'user',
-          birth_date: Timestamp.fromDate(new Date(1990, 11, 31)), 
-          blood_type: "",        
-          chronic_diseases: "",  
-          gender: "",            
-          height: "",            
-          weight: "",            
-          is_organ_donor: false,
-          is_verified: true, // ยืนยันผ่าน OTP แล้ว
-          created_at: Timestamp.now()
-        });
-      });
-
-      Alert.alert('สำเร็จ', 'ยืนยันรหัสและสร้างบัญชีเรียบร้อยแล้ว');
-      if (onVerify) onVerify(); 
-
-    } catch (error) {
-      console.error("OTP Verification Error: ", error);
-      Alert.alert('ผิดพลาด', 'ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <View style={styles.mainContainer}>
       <Image 
@@ -95,6 +41,24 @@ export default function OtpScreen({ onVerify, onBack, userData }) { // 💡 ร�
         style={styles.headerImage}
         resizeMode="cover"
       />
+
+      {/* 🔔 ไอคอนแจ้งเตือนมุมขวาบน */}
+      <TouchableOpacity style={styles.notifButton} onPress={() => setShowNotif(!showNotif)}>
+        <Text style={styles.notifIconText}>🔔</Text>
+        <View style={styles.notifBadge}>
+            <Text style={styles.notifBadgeText}>1</Text>
+        </View>
+      </TouchableOpacity>
+
+      {/* 📩 กล่องข้อความแจ้งเตือน (จะโชว์เมื่อกดกระดิ่ง) */}
+      {showNotif && (
+        <View style={styles.notifPopup}>
+            <Text style={styles.notifTitle}>ระบบ Ksafe</Text>
+            <Text style={styles.notifMessage}>
+                รหัส OTP ของคุณคือ: <Text style={styles.notifHighlight}>{mockOtpCode}</Text>
+            </Text>
+        </View>
+      )}
 
       <SafeAreaView style={styles.container}>
         <KeyboardAvoidingView 
@@ -108,8 +72,7 @@ export default function OtpScreen({ onVerify, onBack, userData }) { // 💡 ร�
 
             <Text style={styles.headerText}>ยืนยันรหัส OTP</Text>
             <Text style={styles.subText}>
-              เราได้ส่งรหัส OTP ไปยังโทรศัพท์ของ{'\n'}
-              {userData?.phone || 'คุณ'} เรียบร้อยแล้ว
+              เราได้ส่งรหัส OTP ไปยังโทรศัพท์ของ{'\n'}คุณเรียบร้อยแล้ว
             </Text>
 
             <TouchableOpacity style={styles.resendContainer}>
@@ -135,15 +98,10 @@ export default function OtpScreen({ onVerify, onBack, userData }) { // 💡 ร�
             </View>
 
             <TouchableOpacity 
-              style={[styles.primaryButton, { opacity: loading ? 0.7 : 1 }]} 
-              onPress={handleVerify}
-              disabled={loading}
+              style={styles.primaryButton} 
+              onPress={onVerify} // กดแล้วเปลี่ยนหน้าทันทีตามที่เขียนไว้ใน App.js
             >
-              {loading ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={styles.buttonText}>ยืนยัน</Text>
-              )}
+              <Text style={styles.buttonText}>ยืนยัน</Text>
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
@@ -167,10 +125,81 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 40,
     borderBottomRightRadius: 40,
   },
+  
+  // --- สไตล์สำหรับ Notification ---
+  notifButton: {
+    position: 'absolute',
+    top: 50, // ปรับระยะห่างจากขอบจอด้านบน
+    right: 20,
+    zIndex: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 25,
+    padding: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 5,
+  },
+  notifIconText: {
+    fontSize: 24,
+  },
+  notifBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    backgroundColor: 'red',
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  notifBadgeText: {
+    color: '#FFF',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  notifPopup: {
+    position: 'absolute',
+    top: 105,
+    right: 20,
+    zIndex: 10,
+    backgroundColor: '#FFFFFF',
+    padding: 15,
+    borderRadius: 15,
+    width: 250,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#F48E54',
+  },
+  notifTitle: {
+    fontWeight: 'bold',
+    color: '#333',
+    fontSize: 14,
+    marginBottom: 5,
+  },
+  notifMessage: {
+    color: '#666',
+    fontSize: 13,
+  },
+  notifHighlight: {
+    fontWeight: 'bold',
+    color: '#F48E54',
+    fontSize: 16,
+  },
+  // ------------------------------
+
   container: {
     flex: 1,
     justifyContent: 'center',
-    padding: 20,
+    padding: 15, 
   },
   keyboardView: {
     flex: 1,
@@ -179,7 +208,7 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
-    padding: 25,
+    padding: 20, 
     width: '100%',         
     maxWidth: 400,         
     alignSelf: 'center',   
@@ -226,12 +255,12 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   otpBox: {
-    width: 60,
-    height: 60,
+    width: 45, 
+    height: 55,
     borderWidth: 1,
-    borderRadius: 15,
+    borderRadius: 12,
     textAlign: 'center',
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#333',
     backgroundColor: '#FFFFFF',
