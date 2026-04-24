@@ -104,8 +104,8 @@ const MedicalHome = ({ dbData, reporterId }) => (
     <View style={styles.grid}>
       <ServiceCard title="โรงพยาบาลมหาราชนครราชสีมา" subtitle="ศูนย์การแพทย์ชั้นนำระดับตติยภูมิของภาคอีสาน" icon={require('./assets/Maharat.png')} phone={dbData["โรงพยาบาลมหาราชนครราชสีมา"]?.phone} reporterId={reporterId} />
       <ServiceCard title="แพทย์ฉุกเฉิน" subtitle="เหตุฉุกเฉินเหตุร้าย จากสายด่วนตรวจสอบ" icon={require('./assets/rp.png')} phone={dbData["แพทย์ฉุกเฉิน"]?.phone} reporterId={reporterId} />
-      <ServiceCard title="โรงพยาบาลราชสีมา ฮอสพิทอล" subtitle="รักษาครบวงจร สะดวกสบาย ใจกลางเมือง เข้าถึงง่ายเพื่อชาว มทส." icon={require('./assets/saildung.png')} phone={dbData["โรงพยาบาลราชสีมา ฮอสพิทอล"]?.phone} reporterId={reporterId} />
-      <ServiceCard title="โรงพยาบาลกรุงเทพราชสีมา" subtitle="มาตรฐานบริการระดับสากล เพื่อสุขภาพที่ดีของคุณ" icon={require('./assets/rh.png')} phone={dbData["โรงพยาบาลกรุงเทพราชสีมา"]?.phone} reporterId={reporterId} />
+      <ServiceCard title="โรงพยาบาลราชสีมา ฮอสพิทอล" subtitle="รักษาครบวงจร สะดวกสบาย ใจกลางเมือง เข้าถึงง่ายเพื่อชาว มทส." icon={require('./assets/rh.png')} phone={dbData["โรงพยาบาลราชสีมา ฮอสพิทอล"]?.phone} reporterId={reporterId} />
+      <ServiceCard title="โรงพยาบาลกรุงเทพราชสีมา" subtitle="มาตรฐานบริการระดับสากล เพื่อสุขภาพที่ดีของคุณ" icon={require('./assets/kungthep.png')} phone={dbData["โรงพยาบาลกรุงเทพราชสีมา"]?.phone} reporterId={reporterId} />
     </View>
     <Text style={styles.sectionTitle}>เบอร์ติดต่ออื่นๆ</Text>
     <ContactItem title="โรงพยาบาลมหาราชนครราชสีมา" subtitle="ศูนย์การแพทย์ชั้นนำระดับตติยภูมิของภาคอีสาน" icon={require('./assets/Maharat.png')} phone={dbData["โรงพยาบาลมหาราชนครราชสีมา"]?.phone} reporterId={reporterId} />
