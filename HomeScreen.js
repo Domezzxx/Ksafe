@@ -94,6 +94,8 @@ const EmergencyHome = ({ dbData, reporterId }) => (
     <ContactItem title="ตำรวจท่องเที่ยว" subtitle="ดูแลแก่นักท่องเที่ยวทั้งชาวไทยและต่างชาติ " icon={require('./assets/thongtiaw.png')} phone={dbData["ตำรวจท่องเที่ยว"]?.phone} reporterId={reporterId} />
     <ContactItem title="ศูนย์เตือนภัยพิบัติแห่งชาติ" subtitle="เฝ้าระวัง แจ้งเตือนภัยธรรมชาติล่วงหน้า " icon={require('./assets/ppb.png')} phone={dbData["ศูนย์เตือนภัยพิบัติแห่งชาติ"]?.phone} reporterId={reporterId} />
     <ContactItem title="ร้องเรียนเรื่องรถโดยสารสาธารณะ" subtitle="ร้องเรียนรถโดยสารสาธารณะ (แท็กซี่, รถตู้, ประจำทาง) " icon={require('./assets/bus.png')} phone={dbData["ร้องเรียนเรื่องรถโดยสารสาธารณะ"]?.phone} reporterId={reporterId} />
+    <ContactItem title="ชมรมจิตอาสาแสดทอง " subtitle="พลังแห่งการแบ่งปัน สร้างสรรค์ความสุขเพื่อสังคม" icon={require('./assets/sutv.png')} phone={dbData["ชมรมจิตอาสาแสดทอง "]?.phone} reporterId={reporterId} />
+    <ContactItem title="ศูนย์กู้ภัยฮุก 31 " subtitle="บรรเทาสาธารณภัย มั่นใจในการบริการเคียงข้างทุกข์สุขชาวนครราชสีมา" icon={require('./assets/huk.png')} phone={dbData["ศูนย์กู้ภัยฮุก 31 "]?.phone} reporterId={reporterId} />
   </View>
 );
 
@@ -103,7 +105,7 @@ const MedicalHome = ({ dbData, reporterId }) => (
       <ServiceCard title="โรงพยาบาลมหาราชนครราชสีมา" subtitle="ศูนย์การแพทย์ชั้นนำระดับตติยภูมิของภาคอีสาน" icon={require('./assets/Maharat.png')} phone={dbData["โรงพยาบาลมหาราชนครราชสีมา"]?.phone} reporterId={reporterId} />
       <ServiceCard title="แพทย์ฉุกเฉิน" subtitle="เหตุฉุกเฉินเหตุร้าย จากสายด่วนตรวจสอบ" icon={require('./assets/rp.png')} phone={dbData["แพทย์ฉุกเฉิน"]?.phone} reporterId={reporterId} />
       <ServiceCard title="โรงพยาบาลราชสีมา ฮอสพิทอล" subtitle="รักษาครบวงจร สะดวกสบาย ใจกลางเมือง เข้าถึงง่ายเพื่อชาว มทส." icon={require('./assets/saildung.png')} phone={dbData["โรงพยาบาลราชสีมา ฮอสพิทอล"]?.phone} reporterId={reporterId} />
-      <ServiceCard title="โรงพยาบาลกรุงเทพราชสีมา" subtitle="มาตรฐานบริการระดับสากล เพื่อสุขภาพที่ดีของคุณ" icon={require('./assets/kungthep.png')} phone={dbData["โรงพยาบาลกรุงเทพราชสีมา"]?.phone} reporterId={reporterId} />
+      <ServiceCard title="โรงพยาบาลกรุงเทพราชสีมา" subtitle="มาตรฐานบริการระดับสากล เพื่อสุขภาพที่ดีของคุณ" icon={require('./assets/rh.png')} phone={dbData["โรงพยาบาลกรุงเทพราชสีมา"]?.phone} reporterId={reporterId} />
     </View>
     <Text style={styles.sectionTitle}>เบอร์ติดต่ออื่นๆ</Text>
     <ContactItem title="โรงพยาบาลมหาราชนครราชสีมา" subtitle="ศูนย์การแพทย์ชั้นนำระดับตติยภูมิของภาคอีสาน" icon={require('./assets/Maharat.png')} phone={dbData["โรงพยาบาลมหาราชนครราชสีมา"]?.phone} reporterId={reporterId} />
