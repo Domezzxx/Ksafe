@@ -16,6 +16,7 @@ import ProfileScreen from './ProfileScreen';
 import MapScreen from './MapScreen';
 import AdminHomeScreen from './AdminHomeScreen';
 import ManageContactScreen from './ManageContactScreen';
+import ManageUserScreen from './ManageUserScreen'; // ✅ เพิ่ม Import หน้าจัดการผู้ใช้
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState('Welcome1');
@@ -32,7 +33,8 @@ export default function App() {
     search: () => setCurrentScreen('Search'),
     profile: () => setCurrentScreen('Profile'),
     admin: () => setCurrentScreen('AdminHome'),
-    manageContact: () => setCurrentScreen('ManageContact'), 
+    manageContact: () => setCurrentScreen('ManageContact'),
+    manageUser: () => setCurrentScreen('ManageUser'), // ✅ เพิ่มเส้นทางใหม่
   };
 
   // --- Welcome Screens ---
@@ -122,7 +124,7 @@ if (currentScreen === 'ForgotPassword') {
         onGoHome={navigateTo.admin}
         onGoSOS={navigateTo.manageContact} 
         onGoSearch={navigateTo.manageContact} 
-        onGoProfile={navigateTo.profile}
+        onGoProfile={navigateTo.manageUser}
       />
     );
   }
@@ -133,7 +135,19 @@ if (currentScreen === 'ForgotPassword') {
         onGoHome={navigateTo.admin}
         onGoSOS={navigateTo.manageContact}
         onGoSearch={navigateTo.manageContact}
-        onGoProfile={navigateTo.profile}
+        onGoProfile={navigateTo.manageUser}
+      />
+    );
+  }
+
+  // ✅ เพิ่มหน้า ManageUser เข้าไปใน Flow
+  if (currentScreen === 'ManageUser') {
+    return (
+      <ManageUserScreen 
+        onGoHome={navigateTo.admin}
+        onGoSOS={navigateTo.manageContact}
+        onGoSearch={navigateTo.manageContact}
+        onGoProfile={navigateTo.profile} // 👈 ไปหน้า Profile ของ Admin เอง (ถ้ามี)
       />
     );
   }
