@@ -2,18 +2,15 @@ import React, { useState, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, SafeAreaView, KeyboardAvoidingView, Platform, Image,
-  Alert, ActivityIndicator // 💡 เพิ่ม Alert และ ActivityIndicator
+  Alert, ActivityIndicator
 } from 'react-native';
 
-// 💡 เพิ่มการนำเข้า Firebase
-import { db } from './firebaseConfig';
-import { 
-    doc, runTransaction, Timestamp, collection, getDocs, query, orderBy, limit 
-} from 'firebase/firestore';
+// ✅ ไม่ต้อง import Firebase แล้ว — Register.js สร้าง user ไปแล้ว
+// หน้านี้ทำหน้าที่แค่ "จำลอง" การยืนยัน OTP เท่านั้น
 
-export default function OtpScreen({ onVerify, onBack, userData }) { // 💡 รับ userData เพิ่ม
+export default function OtpScreen({ onVerifySuccess, onBack, userData }) {
   const [otp, setOtp] = useState(['', '', '', '']);
-  const [loading, setLoading] = useState(false); // 💡 สถานะโหลด
+  const [loading, setLoading] = useState(false);
   const inputs = useRef([]);
 
   const handleChange = (text, index) => {
@@ -31,8 +28,9 @@ export default function OtpScreen({ onVerify, onBack, userData }) { // 💡 ร�
     }
   };
 
-  // 💡 ฟังก์ชันจัดการการยืนยันและบันทึกข้อมูล
-  const handleVerify = async () => {
+  // ✅ ฟังก์ชันยืนยัน OTP (placeholder — ยังไม่ได้เชื่อมกับระบบ OTP จริง)
+  //    แค่เช็คว่ากรอกครบ 4 ตัวแล้วผ่านไปหน้าถัดไป ไม่ยุ่งกับ Firestore
+  const handleVerify = () => {
     const otpCode = otp.join('');
     if (otpCode.length < 4) {
       Alert.alert('แจ้งเตือน', 'กรุณากรอกรหัส OTP ให้ครบถ้วน');
@@ -40,52 +38,14 @@ export default function OtpScreen({ onVerify, onBack, userData }) { // 💡 ร�
     }
 
     setLoading(true);
-    try {
-      // 1. หาเลข ID ล่าสุดจากตาราง users
-      const usersRef = collection(db, "users");
-      const q = query(usersRef, orderBy("user_id", "desc"), limit(1));
-      const querySnapshot = await getDocs(q);
-      
-      let lastId = 0;
-      if (!querySnapshot.empty) {
-        lastId = querySnapshot.docs[0].data().user_id;
-      }
-      
-      const newId = lastId + 1;
-      const userIdString = String(newId);
 
-      // 2. ใช้ Transaction บันทึกข้อมูลที่ส่งมาจากหน้า Register
-      await runTransaction(db, async (transaction) => {
-        const userRef = doc(db, "users", userIdString);
-        
-        transaction.set(userRef, {
-          user_id: newId, 
-          first_name: userData?.name || "Unknown",
-          last_name: "",         
-          phone_number: userData?.phone || "",
-          Password: userData?.password || "",
-          role: 'user',
-          birth_date: Timestamp.fromDate(new Date(1990, 11, 31)), 
-          blood_type: "",        
-          chronic_diseases: "",  
-          gender: "",            
-          height: "",            
-          weight: "",            
-          is_organ_donor: false,
-          is_verified: true, // ยืนยันผ่าน OTP แล้ว
-          created_at: Timestamp.now()
-        });
-      });
-
-      Alert.alert('สำเร็จ', 'ยืนยันรหัสและสร้างบัญชีเรียบร้อยแล้ว');
-      if (onVerify) onVerify(); 
-
-    } catch (error) {
-      console.error("OTP Verification Error: ", error);
-      Alert.alert('ผิดพลาด', 'ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่');
-    } finally {
+    // จำลอง delay เหมือนกำลังเช็ค OTP จริง
+    setTimeout(() => {
       setLoading(false);
-    }
+      if (onVerifySuccess) {
+        onVerifySuccess();
+      }
+    }, 500);
   };
 
   return (
