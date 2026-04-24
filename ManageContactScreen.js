@@ -13,14 +13,15 @@ import {
   Dimensions,
   SafeAreaView
 } from 'react-native';
-import { collection, query, onSnapshot, addDoc, updateDoc, doc } from 'firebase/firestore';
-import { db } from './firebaseConfig'; // นำ storage ออกถ้าไม่ได้ใช้ เพื่อลดความซับซ้อน
-import { Edit2, Plus, Search } from 'lucide-react-native';
+import { collection, query, onSnapshot, addDoc, updateDoc, doc, deleteDoc } from 'firebase/firestore';
+import { db } from './firebaseConfig'; 
+import { Edit2, Plus, Search, Trash2, ChevronDown } from 'lucide-react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
 
 const { width } = Dimensions.get('window');
-const categories = ['โรงพยาบาล', 'สถานีตำรวจ', 'กู้ภัย', 'สถานีดับเพลิง','อื่นๆ'];
+
+const categories = ['สถานีตำรวจ', 'โรงพยาบาล', 'กู้ภัย', 'เพลิงไหม้', 'สาธารณูปโภค', 'ความปลอดภัย'];
 
 export default function ManageContactScreen({
   onGoHome,
@@ -31,18 +32,19 @@ export default function ManageContactScreen({
   const [contacts, setContacts] = useState([]);
   const [searchText, setSearchText] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ทั้งหมด');
+  const [showDropdown, setShowDropdown] = useState(false); // ✅ สถานะการเปิด/ปิด Dropdown
 
   const [isManageMode, setIsManageMode] = useState(false);
   const [editId, setEditId] = useState(null);
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
+  const [name, setName] = useState(''); 
+  const [phone, setPhone] = useState(''); 
   const [category, setCategory] = useState('กู้ภัย'); 
   const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!db) return;
-    const q = query(collection(db, "emergency_contacts"));
+    const q = query(collection(db, "emergency_services"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const data = [];
       querySnapshot.forEach((doc) => {
@@ -55,36 +57,24 @@ export default function ManageContactScreen({
   }, []);
 
   const pickImage = async () => {
-    console.log("--- เริ่มขั้นตอนเลือกรูปภาพ ---");
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('สิทธิ์การเข้าถึง', 'เราต้องการสิทธิ์เข้าถึงคลังภาพ');
         return;
       }
-
       let result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: 'images', 
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.2, // ลดคุณภาพเพื่อประหยัดพื้นที่ Firestore (Limit 1MB)
+        quality: 0.2, 
       });
-
       if (result.canceled) return;
-
-      console.log("เลือกรูปสำเร็จ URI:", result.assets[0].uri);
-
-      // ✅ แก้ไข: ใช้ encoding: 'base64' เป็น string เพื่อเลี่ยงปัญหา Property Undefined
       const base64 = await FileSystem.readAsStringAsync(result.assets[0].uri, {
         encoding: 'base64',
       });
-      
-      const fullBase64 = `data:image/jpeg;base64,${base64}`;
-      setImage(fullBase64);
-      console.log("--- แปลง Base64 สำเร็จพร้อมบันทึก ---");
-
+      setImage(`data:image/jpeg;base64,${base64}`);
     } catch (error) {
-      console.error("❌ Error pickImage:", error);
       Alert.alert("Error", "เกิดปัญหาขณะเลือกรูป: " + error.message);
     }
   };
@@ -94,82 +84,125 @@ export default function ManageContactScreen({
       Alert.alert("แจ้งเตือน", "กรุณากรอกข้อมูลให้ครบ");
       return;
     }
-    
     setLoading(true);
     try {
       const payload = { 
-        name: name.trim(), 
-        phone_number: phone.trim(), 
+        title: name.trim(), 
+        phone: phone.trim(), 
         category: category, 
-        image: image || "", // เก็บ Base64 ลง Firestore คอลัมน์ image
+        image: image || "", 
         updatedAt: new Date().toISOString()
       };
-
       if (editId) {
-        await updateDoc(doc(db, "emergency_contacts", editId), payload);
+        await updateDoc(doc(db, "emergency_services", editId), payload);
         Alert.alert("สำเร็จ", "แก้ไขข้อมูลเรียบร้อย");
       } else {
-        await addDoc(collection(db, "emergency_contacts"), payload);
+        await addDoc(collection(db, "emergency_services"), payload);
         Alert.alert("สำเร็จ", "เพิ่มข้อมูลใหม่เรียบร้อย");
       }
-      
       resetForm();
     } catch (error) {
-      console.error("Firestore Save Error:", error);
       Alert.alert("เกิดข้อผิดพลาด", error.message);
     } finally {
       setLoading(false);
     }
   };
 
+  const handleDelete = async (id) => {
+    Alert.alert("ยืนยันการลบ", "คุณต้องการลบข้อมูลหน่วยงานนี้ใช่หรือไม่?", [
+      { text: "ยกเลิก", style: "cancel" },
+      { text: "ลบ", style: "destructive", onPress: async () => {
+        try {
+          await deleteDoc(doc(db, "emergency_services", id));
+          Alert.alert("สำเร็จ", "ลบข้อมูลเรียบร้อย");
+        } catch (e) {
+          Alert.alert("Error", e.message);
+        }
+      }}
+    ]);
+  };
+
   const resetForm = () => {
     setName(''); setPhone(''); setCategory('กู้ภัย'); setImage(null);
-    setEditId(null); setIsManageMode(false);
+    setEditId(null); setIsManageMode(false); setShowDropdown(false);
   };
 
   const openEdit = (item) => {
-    setName(item.name); setPhone(item.phone_number); setCategory(item.category);
-    setImage(item.image); setEditId(item.id); setIsManageMode(true);
+    setName(item.title || ""); 
+    setPhone(item.phone || ""); 
+    setCategory(item.category || "กู้ภัย");
+    setImage(item.image || null); 
+    setEditId(item.id); 
+    setIsManageMode(true);
   };
 
   const filteredData = contacts.filter(item => {
     const matchCategory = selectedCategory === 'ทั้งหมด' || item.category === selectedCategory;
-    const matchText = (item.name || "").toLowerCase().includes(searchText.toLowerCase().trim());
+    const matchText = (item.title || "").toLowerCase().includes(searchText.toLowerCase().trim());
     return matchCategory && matchText;
   });
 
-  // --- ส่วนการ Render (UI) คงเดิมตามที่คุณส่งมา ---
+  // --- UI ส่วนแสดงรายการ (List Mode) ---
   if (!isManageMode) {
     return (
       <View style={styles.container}>
         <SafeAreaView style={{ flex: 1 }}>
-          <View style={styles.headerArea}>
-            <Text style={styles.headerTitle}>Ksafe</Text>
-            <Text style={styles.headerSubtitle}>จัดการเบอร์ติดต่อฉุกเฉิน</Text>
+          {/* ส่วนหัว */}
+          <View style={styles.header}>
+                  <Text style={styles.brandText}>Ksafe</Text>
+                  <Text style={styles.titleText}>จัดการสถานที่</Text>
+                </View>
+
+          {/* แถบค้นหา */}
+          <View style={styles.searchBar}>
+                  <TextInput 
+                    placeholder="ค้นหาในรายการ..." 
+                    style={styles.searchInput} 
+                    value={searchText} 
+                    onChangeText={setSearchText} 
+                  />
+                </View>
+
+          {/* ✅ ส่วน Dropdown Filter (เหมือนหน้า Facilities) */}
+          <View style={styles.filterRow}>
+            <TouchableOpacity 
+              style={styles.dropdownBtn} 
+              onPress={() => setShowDropdown(!showDropdown)}
+            >
+              <Text style={styles.dropdownBtnText}>{selectedCategory}</Text>
+              <ChevronDown size={20} color="#666" />
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.addBtn} onPress={() => setIsManageMode(true)}>
+              <Plus size={20} color="#FFF" />
+              <Text style={styles.addBtnText}>เพิ่มหน่วยงาน</Text>
+            </TouchableOpacity>
           </View>
-          <View style={styles.searchContainer}>
-            <Search size={20} color="#999" style={styles.searchIcon} />
-            <TextInput
-              placeholder="ค้นหาหน่วยงาน..."
-              style={styles.searchInput}
-              value={searchText}
-              onChangeText={setSearchText}
-              placeholderTextColor="#999"
-            />
-          </View>
-          <View style={styles.catContainer}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 20 }}>
-              {['ทั้งหมด', ...categories].map(cat => (
-                <TouchableOpacity
-                  key={cat}
-                  onPress={() => setSelectedCategory(cat)}
-                  style={[styles.catButton, selectedCategory === cat && styles.catActive]}
+
+          {/* Overlay สำหรับแสดงรายการ Dropdown */}
+          {showDropdown && (
+            <View style={styles.dropdownOverlay}>
+              <TouchableOpacity style={{flex: 1}} onPress={() => setShowDropdown(false)} />
+              <View style={styles.dropdownMenu}>
+                <TouchableOpacity 
+                  onPress={() => { setSelectedCategory('ทั้งหมด'); setShowDropdown(false); }} 
+                  style={styles.dropdownItem}
                 >
-                  <Text style={[styles.catText, { color: selectedCategory === cat ? '#fff' : '#666' }]}>{cat}</Text>
+                  <Text style={selectedCategory === 'ทั้งหมด' ? styles.activeText : null}>ทั้งหมด</Text>
                 </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
+                {categories.map(cat => (
+                  <TouchableOpacity 
+                    key={cat} 
+                    onPress={() => { setSelectedCategory(cat); setShowDropdown(false); }} 
+                    style={styles.dropdownItem}
+                  >
+                    <Text style={selectedCategory === cat ? styles.activeText : null}>{cat}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
+
           <FlatList
             data={filteredData}
             keyExtractor={item => item.id}
@@ -182,21 +215,20 @@ export default function ManageContactScreen({
                     style={styles.avatar} 
                   />
                   <View style={{ flex: 1, marginLeft: 15 }}>
-                    <Text style={styles.nameText} numberOfLines={1}>{item.name}</Text>
-                    <Text style={styles.phoneText}>{item.phone_number}</Text>
+                    <Text style={styles.nameText} numberOfLines={1}>{item.title}</Text>
+                    <Text style={styles.phoneText}>{item.phone}</Text>
                     <View style={styles.tag}><Text style={styles.tagText}>{item.category}</Text></View>
                   </View>
-                  <TouchableOpacity style={styles.editBtn} onPress={() => openEdit(item)}>
+                  <TouchableOpacity style={styles.editBtnAction} onPress={() => openEdit(item)}>
                     <Edit2 size={18} color="#F48E54" />
                   </TouchableOpacity>
                 </View>
               </View>
             )}
           />
-          <TouchableOpacity style={styles.fab} onPress={() => setIsManageMode(true)}>
-            <Plus size={30} color="#fff" />
-          </TouchableOpacity>
         </SafeAreaView>
+        
+        {/* Footer Navigation */}
         <View style={styles.footer}>
           <TouchableOpacity style={styles.footerButton} onPress={onGoHome}><Image source={require('./assets/home (2).png')} style={[styles.footerIcon, { tintColor: '#929292' }]} /></TouchableOpacity>
           <TouchableOpacity style={styles.footerButton} onPress={onGoSOS}><Image source={require('./assets/emergency (1).png')} style={[styles.footerIcon, { tintColor: '#F87C47' }]} /></TouchableOpacity>
@@ -207,6 +239,7 @@ export default function ManageContactScreen({
     );
   }
 
+  // --- UI ส่วนแบบฟอร์ม (Manage Mode) ---
   return (
     <View style={styles.container}>
       <SafeAreaView style={{ flex: 1 }}>
@@ -216,15 +249,16 @@ export default function ManageContactScreen({
           </TouchableOpacity>
           <View style={styles.formArea}>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>ชื่อหน่วยงาน</Text>
-              <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="เช่น โรงพยาบาล..." />
+              <Text style={styles.label}>ชื่อหน่วยงาน (Title)</Text>
+              <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="เช่น ตำรวจท่องเที่ยว" />
             </View>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>เบอร์โทรศัพท์</Text>
-              <TextInput style={styles.input} value={phone} onChangeText={setPhone} placeholder="เช่น 1669" keyboardType="phone-pad" />
+              <Text style={styles.label}>เบอร์โทรศัพท์ (Phone)</Text>
+              <TextInput style={styles.input} value={phone} onChangeText={setPhone} placeholder="เช่น 1155" keyboardType="phone-pad" />
             </View>
+            
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>เลือกหมวดหมู่</Text>
+              <Text style={styles.label}>เลือกหมวดหมู่ (Category)</Text>
               <View style={styles.radioGroup}>
                 {categories.map(cat => (
                   <TouchableOpacity key={cat} onPress={() => setCategory(cat)} style={[styles.radioOption, category === cat && styles.radioActive]}>
@@ -233,6 +267,7 @@ export default function ManageContactScreen({
                 ))}
               </View>
             </View>
+
             <Text style={styles.label}>รูปภาพประกอบ</Text>
             <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
               {image ? (
@@ -244,6 +279,7 @@ export default function ManageContactScreen({
                 </View>
               )}
             </TouchableOpacity>
+
             <TouchableOpacity 
               style={[styles.saveButton, { backgroundColor: loading ? '#ccc' : '#F48E54' }]} 
               onPress={handleSave}
@@ -251,6 +287,14 @@ export default function ManageContactScreen({
             >
               {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveButtonText}>บันทึกข้อมูล</Text>}
             </TouchableOpacity>
+
+            {editId && (
+              <TouchableOpacity style={styles.deleteLink} onPress={() => handleDelete(editId)}>
+                  <Trash2 size={16} color="#EF4444" style={{marginRight: 5}}/>
+                  <Text style={{ color: '#EF4444', fontWeight: '600' }}>ลบหน่วยงานนี้</Text>
+              </TouchableOpacity>
+            )}
+
             <TouchableOpacity onPress={resetForm} style={styles.cancelBtn}>
                 <Text style={{ color: '#999' }}>ยกเลิกและย้อนกลับ</Text>
             </TouchableOpacity>
@@ -266,26 +310,35 @@ const styles = StyleSheet.create({
   headerArea: { paddingHorizontal: 25, marginTop: 20, marginBottom: 20 },
   headerTitle: { fontSize: 28, fontWeight: 'bold', color: '#1F2937' },
   headerSubtitle: { fontSize: 16, color: '#6B7280', marginTop: 4 },
-  searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', marginHorizontal: 20, paddingHorizontal: 15, borderRadius: 16, marginBottom: 20, elevation: 3 },
+  searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', marginHorizontal: 20, paddingHorizontal: 15, borderRadius: 16, marginBottom: 15, elevation: 3 },
   searchIcon: { marginRight: 10 },
   searchInput: { flex: 1, height: 50, fontSize: 15, color: '#333' },
-  catContainer: { paddingLeft: 20, marginBottom: 25 },
-  catButton: { paddingHorizontal: 20, paddingVertical: 10, backgroundColor: '#fff', borderRadius: 25, marginRight: 10, elevation: 2 },
-  catActive: { backgroundColor: '#F48E54' },
-  catText: { fontSize: 14, fontWeight: '600' },
-  card: { backgroundColor: '#fff', marginBottom: 15, borderRadius: 24, elevation: 4 },
+  
+  // ✅ Dropdown Styles (จากตัวอย่างที่คุณให้มา)
+  filterRow: { flexDirection: 'row', paddingHorizontal: 20, marginBottom: 15, gap: 10, zIndex: 10 },
+  dropdownBtn: { flex: 1, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#EEE' },
+  dropdownBtnText: { color: '#333', fontWeight: '500' },
+  dropdownOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100 },
+  dropdownMenu: { position: 'absolute', top: 215, left: 20, width: 220, backgroundColor: '#FFF', borderRadius: 12, borderWidth: 1, borderColor: '#EEE', elevation: 10, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10 },
+  dropdownItem: { padding: 15, borderBottomWidth: 1, borderBottomColor: '#F5F5F5' },
+  activeText: { color: '#F48E54', fontWeight: 'bold' },
+  addBtn: { backgroundColor: '#F48E54', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 15, borderRadius: 12, elevation: 2 },
+  addBtnText: { color: '#FFF', fontWeight: 'bold', marginLeft: 5 },
+
+  card: { backgroundColor: '#fff', marginBottom: 15, borderRadius: 24, elevation: 4, marginHorizontal: 20 },
   cardInner: { flexDirection: 'row', alignItems: 'center', padding: 18 },
   avatar: { width: 65, height: 65, borderRadius: 18, backgroundColor: '#F3F4F6' },
   nameText: { fontSize: 17, fontWeight: '700', color: '#1F2937' },
   phoneText: { color: '#F48E54', fontSize: 16, fontWeight: 'bold', marginTop: 2 },
   tag: { alignSelf: 'flex-start', backgroundColor: '#FEE2E2', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 8, marginTop: 6 },
   tagText: { fontSize: 11, color: '#EF4444', fontWeight: 'bold' },
-  editBtn: { padding: 12, backgroundColor: '#FFF7ED', borderRadius: 15 },
-  fab: { position: 'absolute', right: 25, bottom: 120, backgroundColor: '#F48E54', width: 64, height: 64, borderRadius: 32, justifyContent: 'center', alignItems: 'center', elevation: 8 },
+  editBtnAction: { padding: 12, backgroundColor: '#FFF7ED', borderRadius: 15 },
+  
   radioGroup: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 5 },
   radioOption: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, backgroundColor: '#fff', borderWidth: 1, borderColor: '#E5E7EB', marginRight: 10, marginBottom: 10 },
   radioActive: { backgroundColor: '#F48E54', borderColor: '#F48E54' },
   radioText: { fontSize: 14, fontWeight: '600' },
+  
   backHeader: { marginHorizontal: 25, marginTop: 20, marginBottom: 25 },
   backText: { fontSize: 20, color: '#F48E54', fontWeight: 'bold' },
   formArea: { paddingHorizontal: 25 },
@@ -297,8 +350,16 @@ const styles = StyleSheet.create({
   previewImg: { width: '100%', height: '100%' },
   saveButton: { padding: 20, borderRadius: 20, alignItems: 'center', elevation: 4 },
   saveButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 18 },
-  cancelBtn: { marginTop: 20, alignItems: 'center', padding: 15 },
+  deleteLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 15, padding: 10 },
+  cancelBtn: { marginTop: 5, alignItems: 'center', padding: 15 },
+  
   footer: { position: 'absolute', bottom: 0, flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', width: '100%', height: 80, backgroundColor: '#FFF', borderTopWidth: 1, borderTopColor: '#F0F0F0', paddingBottom: 15 },
   footerButton: { padding: 10, flex: 1, alignItems: 'center' },
-  footerIcon: { width: 25, height: 25 }
+  footerIcon: { width: 25, height: 25 },
+   header: { padding: 20 },
+  brandText: { fontSize: 22, fontWeight: 'bold' },
+  titleText: { fontSize: 18, color: '#666' },
+searchBar: { paddingHorizontal: 20, marginBottom: 10 },
+  searchInput: { backgroundColor: '#F5F5F5', padding: 12, borderRadius: 12 },
+  
 });
