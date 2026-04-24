@@ -124,7 +124,13 @@ export default function App() {
 
   // --- Main App Screens ---
   if (currentScreen === 'Search') {
-    return <SearchScreen onBack={navigateTo.home} onGoHome={navigateTo.home} onGoSOS={navigateTo.sos} onGoSearch={navigateTo.search} onGoProfile={navigateTo.manageUser} goToDetail={(placeData) => { setSelectedPlace(placeData); setCurrentScreen('Detail'); }} />;
+    return <SearchScreen 
+    onBack={navigateTo.home} currentUserPhone={userPhone}
+      onGoHome={navigateTo.home}
+      onGoSOS={navigateTo.sos}
+      onGoSearch={navigateTo.search}
+      onGoProfile={navigateTo.profile} 
+    goToDetail={(placeData) => { setSelectedPlace(placeData); setCurrentScreen('Detail'); }} />;
   }
 
   if (currentScreen === 'Detail') {
