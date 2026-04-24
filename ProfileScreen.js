@@ -20,6 +20,7 @@ export default function ProfileScreen({ onGoHome, onGoSOS, onGoSearch, onGoProfi
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showMapModal, setShowMapModal] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const [pickerData, setPickerData] = useState([]);
   const [currentPickerField, setCurrentPickerField] = useState('');
@@ -87,7 +88,14 @@ export default function ProfileScreen({ onGoHome, onGoSOS, onGoSearch, onGoProfi
     } catch (e) { return 0; }
   };
 
+  // ✅ เมื่อกดปุ่มออกจากระบบ → เปิด Modal ยืนยัน (ไม่ออกทันที)
   const handleLogout = () => {
+    setShowLogoutModal(true);
+  };
+
+  // ✅ ยืนยันออกจากระบบจริง (เรียกเมื่อกดปุ่มใน Modal)
+  const confirmLogout = () => {
+    setShowLogoutModal(false);
     signOut(auth)
       .then(() => {
         if (onLogout) {
@@ -483,6 +491,34 @@ export default function ProfileScreen({ onGoHome, onGoSOS, onGoSearch, onGoProfi
         </SafeAreaView>
       </Modal>
 
+      {/* ✅ Modal ยืนยันออกจากระบบ (แบบสวยๆ) */}
+      <Modal visible={showLogoutModal} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlaySlide}>
+          <View style={styles.logoutModalContent}>
+            <View style={styles.modalHandle} />
+
+            {/* วงกลมไอคอนสีแดง */}
+            <View style={styles.logoutIconCircle}>
+              <Ionicons name="log-out-outline" size={44} color="#FF3B30" />
+            </View>
+
+            <Text style={styles.logoutTitle}>ออกจากระบบ?</Text>
+            <Text style={styles.logoutSubtitle}>
+              คุณแน่ใจหรือไม่ว่าต้องการออกจากระบบ{'\n'}
+              คุณจะต้องเข้าสู่ระบบอีกครั้งเพื่อใช้งาน
+            </Text>
+
+            <TouchableOpacity style={styles.btnRed} onPress={confirmLogout}>
+              <Ionicons name="log-out-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
+              <Text style={styles.btnRedText}>ยืนยันออกจากระบบ</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.btnGray} onPress={() => setShowLogoutModal(false)}>
+              <Text style={styles.btnGrayText}>ยกเลิก</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       <View style={styles.footer}>
         <TouchableOpacity style={styles.footerButton} onPress={onGoHome}>
           <Image source={require('./assets/home (2).png')} style={[styles.footerIcon, { tintColor: '#929292' }]} />
@@ -566,5 +602,65 @@ const styles = StyleSheet.create({
     paddingBottom: 15
   },
   footerButton: { padding: 10, flex: 1, alignItems: 'center' },
-  footerIcon: { width: 25, height: 25 }
+  footerIcon: { width: 25, height: 25 },
+
+  // ✅ Style สำหรับ Modal ออกจากระบบ
+  logoutModalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    padding: 30,
+    alignItems: 'center',
+    paddingBottom: 50,
+  },
+  logoutIconCircle: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: '#FFE5E5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+    marginTop: 5,
+    // เงาให้วงกลมดูลอยขึ้นมา
+    shadowColor: '#FF3B30',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  logoutTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 10,
+  },
+  logoutSubtitle: {
+    fontSize: 14,
+    color: '#888',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 28,
+  },
+  btnRed: {
+    backgroundColor: '#FF3B30',
+    width: '100%',
+    paddingVertical: 15,
+    borderRadius: 25,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+    // เงาปุ่มสีแดง
+    shadowColor: '#FF3B30',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  btnRedText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
 });
