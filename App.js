@@ -38,12 +38,12 @@ export default function App() {
     manageUser: () => setCurrentScreen('ManageUser'), 
   };
 
-  // --- Welcome Screens ---
+  // --- 1. Welcome Screens ---
   if (currentScreen === 'Welcome1') return <WelcomeScreen onNext={() => setCurrentScreen('Welcome2')} />;
   if (currentScreen === 'Welcome2') return <WelcomeScreen2 onNext={() => setCurrentScreen('Welcome3')} onBack={() => setCurrentScreen('Welcome1')} />;
   if (currentScreen === 'Welcome3') return <WelcomeScreen3 onNext={() => setCurrentScreen('Login')} onBack={() => setCurrentScreen('Welcome2')} />;
 
-  // --- Auth Screens ---
+  // --- 2. Auth Screens (Login / Register / OTP) ---
   if (currentScreen === 'Login') {
     return (
       <Login 
@@ -64,31 +64,30 @@ export default function App() {
   }
 
   if (currentScreen === 'Otp') {
-    return <OtpScreen userData={tempUserData} onBack={() => setCurrentScreen('Login')} onVerifySuccess={() => setCurrentScreen('Success')} />;
+    return <OtpScreen userData={tempUserData} onBack={() => setCurrentScreen('Register')} onVerifySuccess={() => setCurrentScreen('Success')} />;
   }
 
   if (currentScreen === 'Success') return <Success onNext={() => setCurrentScreen('Login')} />;
 
-  // 💡 --- ลืมรหัสผ่าน (แก้ไขเฉพาะส่วนนี้) ---
+  // --- 3. Forgot Password Flow ---
   if (currentScreen === 'ForgotPassword') {
     return (
       <ForgotPassword 
         onBack={() => setCurrentScreen('Login')} 
         onNext={(phoneNumber) => { 
           setResetPhone(phoneNumber); 
-          setCurrentScreen('ForgotOtp'); // 💡 แก้ไขให้วิ่งไปหน้า ForgotOtp
+          setCurrentScreen('ForgotOtp'); 
         }} 
       />
     );
   }
 
-  // 💡 เพิ่มสถานะหน้า ForgotOtp ขึ้นมาคั่น
   if (currentScreen === 'ForgotOtp') {
     return (
       <OtpScreen 
         userData={{ phone: resetPhone }} 
         onBack={() => setCurrentScreen('ForgotPassword')} 
-        onVerifySuccess={() => setCurrentScreen('ResetPassword')} // 💡 ยืนยัน OTP เสร็จค่อยไปตั้งรหัสผ่านใหม่
+        onVerifySuccess={() => setCurrentScreen('ResetPassword')} 
       />
     );
   }
@@ -97,17 +96,25 @@ export default function App() {
     return (
       <ResetPassword 
         phoneNumber={resetPhone} 
-        onBack={() => setCurrentScreen('ForgotOtp')} // 💡 เวลากดกลับให้ไปหน้า ForgotOtp
+        onBack={() => setCurrentScreen('ForgotOtp')} 
         onResetSuccess={() => { setResetPhone(''); setCurrentScreen('Login'); }} 
         onNext={() => { setResetPhone(''); setCurrentScreen('Login'); }}
       />
     );
   }
-  // ----------------------------------------
 
-  // --- Admin Screens ---
+  // --- 4. Admin Screens ---
   if (currentScreen === 'AdminHome') {
-    return <AdminHomeScreen onLogout={() => setCurrentScreen('Login')} onGoHome={navigateTo.admin} onGoSOS={navigateTo.manageContact} onGoSearch={navigateTo.manageFacilities} onGoProfile={navigateTo.manageUser} onManageFacilities={navigateTo.manageFacilities} />;
+    return (
+      <AdminHomeScreen 
+        onLogout={() => setCurrentScreen('Login')} 
+        onGoHome={navigateTo.admin} 
+        onGoSOS={navigateTo.manageContact} 
+        onGoSearch={navigateTo.manageFacilities} 
+        onGoProfile={navigateTo.manageUser} 
+        onManageFacilities={navigateTo.manageFacilities} 
+      />
+    );
   }
 
   if (currentScreen === 'ManageContact') {
@@ -119,18 +126,22 @@ export default function App() {
   }
 
   if (currentScreen === 'ManageUser') {
-    return <ManageUserScreen onGoHome={navigateTo.admin} onGoSOS={navigateTo.manageContact} onGoSearch={navigateTo.manageContact} onGoProfile={navigateTo.manageUser} />;
+    return <ManageUserScreen onGoHome={navigateTo.admin} onGoSOS={navigateTo.manageContact} onGoSearch={navigateTo.manageFacilities} onGoProfile={navigateTo.manageUser} />;
   }
 
-  // --- Main App Screens ---
+  // --- 5. Main App Screens (User) ---
   if (currentScreen === 'Search') {
-    return <SearchScreen 
-    onBack={navigateTo.home} currentUserPhone={userPhone}
-      onGoHome={navigateTo.home}
-      onGoSOS={navigateTo.sos}
-      onGoSearch={navigateTo.search}
-      onGoProfile={navigateTo.profile} 
-    goToDetail={(placeData) => { setSelectedPlace(placeData); setCurrentScreen('Detail'); }} />;
+    return (
+      <SearchScreen 
+        onBack={navigateTo.home} 
+        currentUserPhone={userPhone}
+        onGoHome={navigateTo.home}
+        onGoSOS={navigateTo.sos}
+        onGoSearch={navigateTo.search}
+        onGoProfile={navigateTo.profile} 
+        goToDetail={(placeData) => { setSelectedPlace(placeData); setCurrentScreen('Detail'); }} 
+      />
+    );
   }
 
   if (currentScreen === 'Detail') {
@@ -156,14 +167,14 @@ export default function App() {
       <ProfileScreen 
         onGoHome={userRole === 'admin' ? navigateTo.admin : navigateTo.home}
         onGoSOS={userRole === 'admin' ? navigateTo.manageContact : navigateTo.sos}
-        onGoSearch={userRole === 'admin' ? navigateTo.manageContact : navigateTo.search}
+        onGoSearch={userRole === 'admin' ? navigateTo.manageFacilities : navigateTo.search}
         onGoProfile={navigateTo.profile}
         onLogout={() => { setUserRole(''); setUserPhone(''); setCurrentScreen('Login'); }} 
       />
     );
   }
 
-  // Default: Home Screen (User)
+  // Default Screen: Home Screen (User)
   return (
     <HomeScreen
       currentUserPhone={userPhone}
@@ -173,4 +184,4 @@ export default function App() {
       onGoProfile={navigateTo.profile}
     />
   );
-} // <--- ปีกกาปิดฟังก์ชัน App ต้องอยู่บรรทัดสุดท้าย
+}
