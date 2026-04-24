@@ -107,7 +107,7 @@ export default function App() {
 
   // --- Admin Screens ---
   if (currentScreen === 'AdminHome') {
-    return <AdminHomeScreen onLogout={() => setCurrentScreen('Login')} onGoHome={navigateTo.admin} onGoSOS={navigateTo.manageContact} onGoSearch={navigateTo.manageFacilities} onGoProfile={navigateTo.profile} onManageFacilities={navigateTo.manageFacilities} />;
+    return <AdminHomeScreen onLogout={() => setCurrentScreen('Login')} onGoHome={navigateTo.admin} onGoSOS={navigateTo.manageContact} onGoSearch={navigateTo.manageFacilities} onGoProfile={navigateTo.manageUser} onManageFacilities={navigateTo.manageFacilities} />;
   }
 
   if (currentScreen === 'ManageContact') {
