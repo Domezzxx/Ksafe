@@ -15,14 +15,18 @@ import {
   updateDoc 
 } from 'firebase/firestore';
 
-const ResetPassword = ({ onNext, onBack, phone }) => {
+// 💡 รับได้ทั้ง phone และ phoneNumber เพื่อความยืดหยุ่น
+const ResetPassword = ({ onNext, onBack, phone, phoneNumber }) => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // กำหนดตัวแปรหลักที่จะใช้ โดยเช็คว่าค่าไหนถูกส่งมา
+  const targetPhone = phone || phoneNumber;
+
   const handleResetPassword = async () => {
-    // 💡 ป้องกัน Error "Unsupported field value: a custom Class object"
-    if (typeof phone !== 'string' || !phone) {
+    // 💡 ป้องกัน Error "Unsupported field value"
+    if (typeof targetPhone !== 'string' || !targetPhone) {
       Alert.alert('ผิดพลาด', 'ข้อมูลเบอร์โทรศัพท์ไม่ถูกต้อง กรุณาเริ่มทำรายการใหม่');
       if (onBack) onBack();
       return;
@@ -39,9 +43,9 @@ const ResetPassword = ({ onNext, onBack, phone }) => {
 
     setLoading(true);
     try {
-      // 💡 Query โดยใช้เบอร์โทรศัพท์ที่ได้รับมาจากหน้าก่อนหน้า
+      // 💡 Query ค้นหา User จากเบอร์โทรศัพท์
       const usersRef = collection(db, "users");
-      const q = query(usersRef, where("phone_number", "==", phone.trim()));
+      const q = query(usersRef, where("phone_number", "==", targetPhone.trim()));
       const querySnapshot = await getDocs(q);
 
       if (querySnapshot.empty) {
@@ -50,7 +54,7 @@ const ResetPassword = ({ onNext, onBack, phone }) => {
         return;
       }
 
-      // อัปเดตรหัสผ่านใหม่ลงในฟิลด์ "Password" (P ตัวใหญ่ตามโครงสร้างของคุณ)
+      // อัปเดตรหัสผ่านใหม่ลงในฟิลด์ "Password" (ตามโครงสร้างฐานข้อมูลของคุณ)
       const userDoc = querySnapshot.docs[0];
       const userDocRef = doc(db, "users", userDoc.id);
 
@@ -98,6 +102,7 @@ const ResetPassword = ({ onNext, onBack, phone }) => {
               secureTextEntry={true}
               value={newPassword}
               onChangeText={setNewPassword}
+              color="#000"
             />
 
             <Text style={styles.label}>ยืนยันรหัสผ่านใหม่</Text>
@@ -108,6 +113,7 @@ const ResetPassword = ({ onNext, onBack, phone }) => {
               secureTextEntry={true}
               value={confirmPassword}
               onChangeText={setConfirmPassword}
+              color="#000"
             />
 
             <View style={{ marginTop: 20 }}>
