@@ -158,20 +158,20 @@ export default function ManageUserScreen({
     return (
       <View style={styles.container}>
         <SafeAreaView style={{ flex: 1 }}>
-          <View style={styles.headerArea}>
-            <Text style={styles.headerTitle}>Ksafe</Text>
-            <Text style={styles.headerSubtitle}>จัดการผู้ใช้</Text>
-          </View>
+          <View style={styles.header}>
+                            <Text style={styles.brandText}>Ksafe</Text>
+                            <Text style={styles.titleText}>จัดการสถานที่</Text>
+                          </View>
 
-          <View style={styles.searchContainer}>
-            <Search size={18} color="#F48E54" style={styles.searchIcon} />
-            <TextInput
-              placeholder="ค้นหาผู้ใช้งาน"
-              style={styles.searchInput}
-              value={searchText}
-              onChangeText={setSearchText}
-            />
-          </View>
+          
+                    <View style={styles.searchBar}>
+                            <TextInput 
+                              placeholder="ค้นหาในรายการ..." 
+                              style={styles.searchInput} 
+                              value={searchText} 
+                              onChangeText={setSearchText} 
+                            />
+                          </View>
 
           <FlatList
             data={filteredUsers}
@@ -321,5 +321,12 @@ const styles = StyleSheet.create({
   deleteBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 18 },
   footer: { position: 'absolute', bottom: 0, flexDirection: 'row', width: '100%', height: 70, backgroundColor: '#FFF', borderTopWidth: 1, borderTopColor: '#F0F0F0', paddingBottom: 10 },
   footerButton: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  footerIcon: { width: 24, height: 24 }
+  footerIcon: { width: 24, height: 24 },
+   header: { padding: 20 },
+  brandText: { fontSize: 22, fontWeight: 'bold' },
+  titleText: { fontSize: 18, color: '#666' },
+  searchBar: { paddingHorizontal: 20, marginBottom: 10 },
+  searchInput: { backgroundColor: '#F5F5F5', padding: 12, borderRadius: 12 },
+  
+ 
 });
