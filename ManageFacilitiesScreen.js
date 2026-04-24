@@ -4,14 +4,14 @@ import {
   Image, StyleSheet, ScrollView, ActivityIndicator,
   Alert, Dimensions, SafeAreaView, KeyboardAvoidingView, Platform
 } from 'react-native';
-import { collection, query, onSnapshot, addDoc, updateDoc, doc, deleteDoc } from 'firebase/firestore';
+// ✅ นำเข้า GeoPoint จาก firestore
+import { collection, query, onSnapshot, addDoc, updateDoc, doc, deleteDoc, GeoPoint } from 'firebase/firestore';
 import { db } from './firebaseConfig';
 import { ChevronLeft, Edit3, Trash2, Plus, ChevronDown, MapPin } from 'lucide-react-native';
 import MapView, { Marker } from 'react-native-maps';
 
 const { width } = Dimensions.get('window');
 
-// พิกัดเริ่มต้น (ตัวอย่าง: โคราช)
 const INITIAL_REGION = {
   latitude: 14.9744,
   longitude: 102.0978,
@@ -27,7 +27,6 @@ export default function ManageFacilitiesScreen({ onGoHome, onGoSOS, onGoSearch, 
   const [selectedCategory, setSelectedCategory] = useState('ทั้งหมด');
   const [showDropdown, setShowDropdown] = useState(false);
 
-  // Form States
   const [isManageMode, setIsManageMode] = useState(false);
   const [editId, setEditId] = useState(null);
   const [name, setName] = useState('');
@@ -37,7 +36,6 @@ export default function ManageFacilitiesScreen({ onGoHome, onGoSOS, onGoSearch, 
   const [loading, setLoading] = useState(false);
   const [region, setRegion] = useState(INITIAL_REGION);
 
-  // ดึงข้อมูลจาก Firebase
   useEffect(() => {
     const q = query(collection(db, "facilities"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -59,7 +57,8 @@ export default function ManageFacilitiesScreen({ onGoHome, onGoSOS, onGoSearch, 
         เบอร์โทร: phone,
         ที่อยู่: address,
         ประเภท: type,
-        พิกัด: [region.latitude, region.longitude],
+        // ✅ แก้ไขให้บันทึกเป็น GeoPoint
+        พิกัด: new GeoPoint(region.latitude, region.longitude),
       };
 
       if (editId) {
@@ -89,11 +88,24 @@ export default function ManageFacilitiesScreen({ onGoHome, onGoSOS, onGoSearch, 
     setAddress(item.ที่อยู่);
     setType(item.ประเภท || 'โรงพยาบาล');
     setEditId(item.id);
+    
     if (item.พิกัด) {
+      // ✅ ตรวจสอบว่าเป็น GeoPoint หรือ Array แบบเก่า
+      let lat = INITIAL_REGION.latitude;
+      let lng = INITIAL_REGION.longitude;
+
+      if (item.พิกัด.latitude !== undefined) {
+        lat = item.พิกัด.latitude;
+        lng = item.พิกัด.longitude;
+      } else if (Array.isArray(item.พิกัด)) {
+        lat = item.พิกัด[0];
+        lng = item.พิกัด[1];
+      }
+
       setRegion({
         ...INITIAL_REGION,
-        latitude: item.พิกัด[0],
-        longitude: item.พิกัด[1],
+        latitude: parseFloat(lat),
+        longitude: parseFloat(lng),
       });
     }
     setIsManageMode(true);
@@ -105,7 +117,6 @@ export default function ManageFacilitiesScreen({ onGoHome, onGoSOS, onGoSearch, 
     return matchCat && matchText;
   });
 
-  // --- Header ส่วนจัดการรายการ ---
   const renderHeader = () => (
     <View style={{ backgroundColor: '#FFF' }}>
       <View style={styles.header}>
@@ -182,7 +193,6 @@ export default function ManageFacilitiesScreen({ onGoHome, onGoSOS, onGoSearch, 
     );
   }
 
-  // --- หน้าฟอร์ม เพิ่ม/แก้ไข ---
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : null} style={styles.container}>
       <SafeAreaView style={{ flex: 1 }}>
