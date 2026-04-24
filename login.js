@@ -14,10 +14,9 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
-// ✅ เปลี่ยนมาใช้ Firebase Auth แทนการ query Firestore เอง
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { db, auth } from './firebaseConfig';
+// 💡 นำเข้า Firestore
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from './firebaseConfig';
 
 const Login = ({ onLogin, onRegister, onForgotPassword }) => {
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -33,43 +32,27 @@ const Login = ({ onLogin, onRegister, onForgotPassword }) => {
 
     setLoading(true);
     try {
-      // 1. สร้าง fake email ให้ตรงกับที่ Register.js ใช้ตอนสมัคร
-      const fakeEmail = `${phoneNumber}@ksafe.app`;
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("phone_number", "==", phoneNumber));
+      const querySnapshot = await getDocs(q);
 
-      // 2. ให้ Firebase Auth ตรวจสอบเบอร์+รหัสผ่าน
-      //    ถ้าถูกต้อง Firebase จะจำไว้ว่าใครล็อกอินอยู่ (auth.currentUser)
-      const userCredential = await signInWithEmailAndPassword(auth, fakeEmail, password);
-      const user = userCredential.user;
-
-      // 3. ไปดึง role จาก Firestore (เพื่อเช็คว่าเป็น user หรือ admin)
-      const userDocRef = doc(db, 'users', user.uid);
-      const docSnap = await getDoc(userDocRef);
-
-      let role = 'user';
-      if (docSnap.exists()) {
-        role = docSnap.data().role || 'user';
+      if (querySnapshot.empty) {
+        Alert.alert('ผิดพลาด', 'ไม่พบเบอร์โทรศัพท์นี้ในระบบ');
+        setLoading(false);
+        return;
       }
 
-      // 4. ส่ง role และเบอร์กลับไปให้ App.js
-      onLogin(role, phoneNumber);
+      const userData = querySnapshot.docs[0].data();
 
-    } catch (error) {
-      console.error("Login Error:", error);
-
-      // แสดง error ให้เข้าใจง่าย
-      if (
-        error.code === 'auth/user-not-found' ||
-        error.code === 'auth/invalid-credential' ||
-        error.code === 'auth/wrong-password'
-      ) {
-        Alert.alert('ผิดพลาด', 'เบอร์โทรหรือรหัสผ่านไม่ถูกต้อง');
-      } else if (error.code === 'auth/invalid-email') {
-        Alert.alert('ผิดพลาด', 'รูปแบบเบอร์โทรไม่ถูกต้อง');
-      } else if (error.code === 'auth/too-many-requests') {
-        Alert.alert('แจ้งเตือน', 'ลองผิดหลายครั้งเกินไป กรุณารอสักครู่แล้วลองใหม่');
+      if (userData.Password === password || userData.password === password) {
+        // 💡 อัปเดตฟังก์ชันตามที่คุณคัดมา: ส่งทั้ง Role และ phoneNumber กลับไปที่ App.js
+        onLogin(userData.role || 'user', phoneNumber);
       } else {
-        Alert.alert('ข้อผิดพลาด', 'ไม่สามารถเข้าสู่ระบบได้ กรุณาลองใหม่');
+        Alert.alert('ผิดพลาด', 'รหัสผ่านไม่ถูกต้อง');
       }
+    } catch (error) {
+      console.error(error);
+      Alert.alert('ข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อฐานข้อมูลได้');
     } finally {
       setLoading(false);
     }
@@ -118,6 +101,7 @@ const Login = ({ onLogin, onRegister, onForgotPassword }) => {
               </TouchableOpacity>
             </View>
 
+            {/* โครงสร้างปุ่มลืมรหัสผ่านยังคงอยู่ตามไฟล์เดิมของคุณ */}
             <TouchableOpacity style={styles.forgotPasswordContainer} onPress={onForgotPassword}>
               <Text style={styles.forgotPasswordText}>ลืมรหัสผ่าน ?</Text>
             </TouchableOpacity>
