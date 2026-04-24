@@ -24,7 +24,7 @@ export default function App() {
   const [resetPhone, setResetPhone] = useState('');
   const [userRole, setUserRole] = useState('');
 
-  // เพิ่ม state เก็บเบอร์โทร
+  // เก็บเบอร์โทรของ user ที่ล็อกอิน
   const [userPhone, setUserPhone] = useState('');
 
   const navigateTo = {
@@ -45,7 +45,7 @@ export default function App() {
       <Login
         onLogin={(role, phone) => {
           setUserRole(role);
-          setUserPhone(phone); // เก็บเบอร์โทร
+          setUserPhone(phone);
           setCurrentScreen('Home');
         }}
         onRegister={() => setCurrentScreen('Register')}
@@ -54,15 +54,41 @@ export default function App() {
     );
   }
 
-  if (currentScreen === 'Register') return <Register onBack={() => setCurrentScreen('Login')} onRegisterSuccess={() => setCurrentScreen('Otp')} />;
-  if (currentScreen === 'Otp') return <OtpScreen onVerifySuccess={() => setCurrentScreen('Success')} />;
-  if (currentScreen === 'Success') return <Success onContinue={() => setCurrentScreen('Login')} />;
+  // Register → ส่ง data (name, phone, password, uid) ต่อไปให้ OTP
+  if (currentScreen === 'Register') {
+    return (
+      <Register
+        onBack={() => setCurrentScreen('Login')}
+        onNext={(data) => {
+          setTempUserData(data);
+          setCurrentScreen('Otp');
+        }}
+      />
+    );
+  }
+
+  // OTP → รับ userData (เพื่อแสดงเบอร์โทร) + ปุ่มย้อนกลับไปหน้า Login
+  if (currentScreen === 'Otp') {
+    return (
+      <OtpScreen
+        userData={tempUserData}
+        onBack={() => setCurrentScreen('Login')}
+        onVerifySuccess={() => setCurrentScreen('Success')}
+      />
+    );
+  }
+
+  // Success → ใช้ prop "onNext" ให้ตรงกับ Success.js
+  if (currentScreen === 'Success') return <Success onNext={() => setCurrentScreen('Login')} />;
+
   if (currentScreen === 'ForgotPassword') return <ForgotPassword onBack={() => setCurrentScreen('Login')} onSendOtp={(phone) => { setResetPhone(phone); setCurrentScreen('ResetPassword'); }} />;
   if (currentScreen === 'ResetPassword') return <ResetPassword phoneNumber={resetPhone} onBack={() => setCurrentScreen('ForgotPassword')} onResetSuccess={() => setCurrentScreen('Login')} />;
 
+  // ✅ Search → เพิ่ม onBack ให้กลับไปหน้า Home ได้
   if (currentScreen === 'Search') {
     return (
       <SearchScreen
+        onBack={() => setCurrentScreen('Home')}
         onGoHome={navigateTo.home}
         onGoSOS={navigateTo.sos}
         onGoSearch={navigateTo.search}
@@ -121,7 +147,7 @@ export default function App() {
     );
   }
 
-  // ส่ง currentUserPhone ไปที่ HomeScreen
+  // Default: HomeScreen
   return (
     <HomeScreen
       currentUserPhone={userPhone}
