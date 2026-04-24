@@ -80,14 +80,12 @@ const EmergencyHome = ({ dbData, reporterId }) => (
   <View style={styles.pageContent}>
     <View style={styles.grid}>
       <ServiceCard title="สถานีตำรวจ" subtitle="แจ้งเหตุด่วนเหตุร้ายกับตำรวจ" icon={require('./assets/police.png')} phone={dbData["สถานีตำรวจ"]?.phone} reporterId={reporterId} />
-      <ServiceCard title="แพทย์ฉุกเฉิน" subtitle="บริการทางด้านสุขภาพ การส่งเสริม ป้องกัน รักษา และฟื้นฟูสภาวะความเจ็บป่วย" icon={require('./assets/hospital.png')} phone={dbData["แพทย์ฉุกเฉิน"]?.phone} reporterId={reporterId} />
-      <ServiceCard title="กู้ภัย กู้ชีพ" subtitle="อุบัติเหตุฉุกเฉิน เหตุเร่งด่วน" icon={require('./assets/rs.png')} phone={dbData["กู้ภัย กู้ชีพ"]?.phone} reporterId={reporterId} />
+      <ServiceCard title="แพทย์ฉุกเฉิน" subtitle="บริการทางด้านสุขภาพ การส่งเสริม ป้องกัน รักษา และฟื้นฟูสภาวะความเจ็บป่วย" icon={require('./assets/rp.png')} phone={dbData["แพทย์ฉุกเฉิน"]?.phone} reporterId={reporterId} />
+      <ServiceCard title="สายด่วนจราจร" subtitle="ขอความช่วยเหลือบนท้องถนนตลอด 24 ชั่วโมง " icon={require('./assets/jrajon.png')} phone={dbData["สายด่วนจราจร"]?.phone} reporterId={reporterId} />
       <ServiceCard title="เพลิงไหม้" subtitle="แจ้งเหตุเพลิงไหม้" icon={require('./assets/fire.png')} phone={dbData["เพลิงไหม้"]?.phone} reporterId={reporterId} />
     </View>
     <Text style={styles.sectionTitle}>เบอร์ติดต่ออื่นๆ</Text>
     <ContactItem title="สถานีตำรวจ" subtitle="แจ้งเหตุด่วนเหตุร้ายกับตำรวจ" icon={require('./assets/police.png')} phone={dbData["สถานีตำรวจ"]?.phone} reporterId={reporterId} />
-    <ContactItem title="โรงพยาบาล" subtitle="บริการทางด้านสุขภาพ" icon={require('./assets/hospital.png')} phone={dbData["โรงพยาบาล"]?.phone} reporterId={reporterId} />
-    <ContactItem title="กู้ภัย กู้ชีพ" subtitle="อุบัติเหตุฉุกเฉิน เหตุเร่งด่วน" icon={require('./assets/rs.png')} phone={dbData["กู้ภัย กู้ชีพ"]?.phone} reporterId={reporterId} />
     <ContactItem title="เพลิงไหม้" subtitle="แจ้งเหตุเพลิงไหม้" icon={require('./assets/fire.png')} phone={dbData["เพลิงไหม้"]?.phone} reporterId={reporterId} />
     <ContactItem title="การไฟฟ้าส่วนภูมิภาค" subtitle="จัดหาและจำหน่ายพลังงานไฟฟ้า" icon={require('./assets/phifa.png')} phone={dbData["การไฟฟ้าส่วนภูมิภาค"]?.phone} reporterId={reporterId} />
     <ContactItem title="กรมการขนส่งทางบก" subtitle="ดูแล จัดระเบียบ พัฒนาระบบการขนส่งทางถนน" icon={require('./assets/khonsong.png')} phone={dbData["กรมการขนส่งทางบก"]?.phone} reporterId={reporterId} />
