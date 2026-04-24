@@ -69,20 +69,41 @@ export default function App() {
 
   if (currentScreen === 'Success') return <Success onNext={() => setCurrentScreen('Login')} />;
 
+  // 💡 --- ลืมรหัสผ่าน (แก้ไขเฉพาะส่วนนี้) ---
   if (currentScreen === 'ForgotPassword') {
-    return <ForgotPassword onBack={() => setCurrentScreen('Login')} onNext={(phoneNumber) => { setResetPhone(phoneNumber); setCurrentScreen('ResetPassword'); }} />;
+    return (
+      <ForgotPassword 
+        onBack={() => setCurrentScreen('Login')} 
+        onNext={(phoneNumber) => { 
+          setResetPhone(phoneNumber); 
+          setCurrentScreen('ForgotOtp'); // 💡 แก้ไขให้วิ่งไปหน้า ForgotOtp
+        }} 
+      />
+    );
+  }
+
+  // 💡 เพิ่มสถานะหน้า ForgotOtp ขึ้นมาคั่น
+  if (currentScreen === 'ForgotOtp') {
+    return (
+      <OtpScreen 
+        userData={{ phone: resetPhone }} 
+        onBack={() => setCurrentScreen('ForgotPassword')} 
+        onVerifySuccess={() => setCurrentScreen('ResetPassword')} // 💡 ยืนยัน OTP เสร็จค่อยไปตั้งรหัสผ่านใหม่
+      />
+    );
   }
 
   if (currentScreen === 'ResetPassword') {
     return (
       <ResetPassword 
         phoneNumber={resetPhone} 
-        onBack={() => setCurrentScreen('ForgotPassword')} 
+        onBack={() => setCurrentScreen('ForgotOtp')} // 💡 เวลากดกลับให้ไปหน้า ForgotOtp
         onResetSuccess={() => { setResetPhone(''); setCurrentScreen('Login'); }} 
         onNext={() => { setResetPhone(''); setCurrentScreen('Login'); }}
       />
     );
   }
+  // ----------------------------------------
 
   // --- Admin Screens ---
   if (currentScreen === 'AdminHome') {
