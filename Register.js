@@ -13,9 +13,9 @@ import {
     ActivityIndicator
 } from 'react-native';
 
-import { db, auth } from './firebaseConfig';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc, Timestamp } from 'firebase/firestore';
+// ✅ เปลี่ยนมาใช้ Firestore อย่างเดียวตามความต้องการ
+import { db } from './firebaseConfig';
+import { collection, query, where, getDocs, addDoc, Timestamp } from 'firebase/firestore';
 
 const Register = ({ onNext, onBack }) => {
     const [name, setName] = useState('');
@@ -37,20 +37,24 @@ const Register = ({ onNext, onBack }) => {
 
         setLoading(true);
         try {
-            // 2. สร้าง Email จากเบอร์โทร เพื่อใช้กับ Firebase Auth
-            //    (Firebase Auth ต้องการ Email จึงสร้าง email จำลองจากเบอร์โทร)
-            const fakeEmail = `${phone}@ksafe.app`;
+            // 2. ตรวจสอบว่าเบอร์โทรศัพท์นี้เคยลงทะเบียนใน Firestore หรือยัง
+            const usersRef = collection(db, "users");
+            const q = query(usersRef, where("phone_number", "==", phone.trim()));
+            const querySnapshot = await getDocs(q);
 
-            // 3. สร้าง User ใน Firebase Authentication จริงๆ
-            const userCredential = await createUserWithEmailAndPassword(auth, fakeEmail, password);
-            const user = userCredential.user;
+            if (!querySnapshot.empty) {
+                Alert.alert('แจ้งเตือน', 'เบอร์โทรศัพท์นี้ถูกใช้ไปแล้ว');
+                setLoading(false);
+                return;
+            }
 
-            // 4. บันทึกข้อมูลโปรไฟล์ลง Firestore ในทันที
-            //    ProfileScreen.js จะดึงข้อมูลจากที่นี่เวลาล็อกอิน
-            await setDoc(doc(db, 'users', user.uid), {
+            // 3. บันทึกข้อมูลลง Firestore โดยตรง (เพื่อใช้ตรวจสอบตอน Login)
+            const newUser = {
                 firstName: name,
                 lastName: '',
-                phone: phone,
+                phone_number: phone.trim(), // ใช้ key นี้ให้ตรงกับหน้า Login
+                password: password,         // เก็บ password ตรงๆ เพื่อใช้เทียบค่าในหน้า Login
+                role: 'user',               // กำหนดสิทธิ์เริ่มต้น
                 weight: '',
                 height: '',
                 birthDate: '01/01/2540',
@@ -63,24 +67,20 @@ const Register = ({ onNext, onBack }) => {
                 emergencyContact: { name: 'สถานีตำรวจ', phone: '191' },
                 profileImage: 'https://cdn-icons-png.flaticon.com/512/149/149071.png',
                 createdAt: Timestamp.now(),
-            });
+            };
 
-            // 5. ส่งข้อมูลไปหน้าถัดไป (OTP หรืออื่นๆ)
+            const docRef = await addDoc(collection(db, 'users'), newUser);
+
+            // 4. ส่งข้อมูลไปหน้าถัดไป
             if (onNext) {
-                onNext({ name, phone, password, uid: user.uid });
+                onNext({ name, phone, password, id: docRef.id });
             }
+
+            Alert.alert('สำเร็จ', 'ลงทะเบียนเรียบร้อยแล้ว');
 
         } catch (error) {
             console.error("Register Error: ", error);
-
-            // แสดง Error ที่เข้าใจง่าย
-            if (error.code === 'auth/email-already-in-use') {
-                Alert.alert('แจ้งเตือน', 'เบอร์โทรนี้ถูกลงทะเบียนแล้ว กรุณาเข้าสู่ระบบ');
-            } else if (error.code === 'auth/weak-password') {
-                Alert.alert('แจ้งเตือน', 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
-            } else {
-                Alert.alert('ผิดพลาด', 'เกิดข้อผิดพลาดในการสมัครสมาชิก กรุณาลองใหม่');
-            }
+            Alert.alert('ผิดพลาด', 'เกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูล');
         } finally {
             setLoading(false);
         }
