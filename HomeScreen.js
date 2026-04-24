@@ -95,7 +95,7 @@ const EmergencyHome = ({ dbData, reporterId }) => (
     <ContactItem title="ศูนย์เตือนภัยพิบัติแห่งชาติ" subtitle="เฝ้าระวัง แจ้งเตือนภัยธรรมชาติล่วงหน้า " icon={require('./assets/ppb.png')} phone={dbData["ศูนย์เตือนภัยพิบัติแห่งชาติ"]?.phone} reporterId={reporterId} />
     <ContactItem title="ร้องเรียนเรื่องรถโดยสารสาธารณะ" subtitle="ร้องเรียนรถโดยสารสาธารณะ (แท็กซี่, รถตู้, ประจำทาง) " icon={require('./assets/bus.png')} phone={dbData["ร้องเรียนเรื่องรถโดยสารสาธารณะ"]?.phone} reporterId={reporterId} />
     <ContactItem title="ชมรมจิตอาสาแสดทอง " subtitle="พลังแห่งการแบ่งปัน สร้างสรรค์ความสุขเพื่อสังคม" icon={require('./assets/sutv.png')} phone={dbData["ชมรมจิตอาสาแสดทอง "]?.phone} reporterId={reporterId} />
-    <ContactItem title="ศูนย์กู้ภัยฮุก 31 " subtitle="บรรเทาสาธารณภัย มั่นใจในการบริการเคียงข้างทุกข์สุขชาวนครราชสีมา" icon={require('./assets/huk.png')} phone={dbData["ศูนย์กู้ภัยฮุก 31 "]?.phone} reporterId={reporterId} />
+    <ContactItem title="ศูนย์กู้ภัยฮุก 31 " subtitle="บรรเทาสาธารณภัย มั่นใจในการบริการเคียงข้างทุกข์สุขชาวนครราชสีมา" icon={require('./assets/huk.png')} phone={dbData["ศูนย์กู้ภัยฮุก 31"]?.phone} reporterId={reporterId} />
   </View>
 );
 
@@ -110,7 +110,7 @@ const MedicalHome = ({ dbData, reporterId }) => (
     <Text style={styles.sectionTitle}>เบอร์ติดต่ออื่นๆ</Text>
     <ContactItem title="โรงพยาบาลมหาราชนครราชสีมา" subtitle="ศูนย์การแพทย์ชั้นนำระดับตติยภูมิของภาคอีสาน" icon={require('./assets/Maharat.png')} phone={dbData["โรงพยาบาลมหาราชนครราชสีมา"]?.phone} reporterId={reporterId} />
     <ContactItem title="โรงพยาบาลกรุงเทพราชสีมา" subtitle="มาตรฐานบริการระดับสากล เพื่อสุขภาพที่ดีของคุณ" icon={require('./assets/kungthep.png')} phone={dbData["โรงพยาบาลกรุงเทพราชสีมา"]?.phone} reporterId={reporterId} />
-    <ContactItem title="แจ้งเหตุด่วน" subtitle="บริการปฐมภูมิเบื้องต้น เข้าถึงง่ายเพื่อชาว มทส. " icon={require('./assets/pcu.png')} phone={dbData["แจ้งเหตุด่วน"]?.phone} reporterId={reporterId} />
+    <ContactItem title="PCU SUT" subtitle="บริการปฐมภูมิเบื้องต้น เข้าถึงง่ายเพื่อชาว มทส. " icon={require('./assets/pcu.png')} phone={dbData["PCU SUT"]?.phone} reporterId={reporterId} />
     <ContactItem title="โรงพยาบาลราชสีมา ฮอสพิทอล" subtitle="รักษาครบวงจร สะดวกสบาย ใจกลางเมือง เข้าถึงง่ายเพื่อชาว มทส. " icon={require('./assets/rh.png')} phone={dbData["โรงพยาบาลราชสีมา ฮอสพิทอล"]?.phone} reporterId={reporterId} />
     <ContactItem title="โรงพยาบาลมหาวิทยาลัยเทคโนโลยีสุรนารี" subtitle="นวัตกรรมการแพทย์ที่ทันสมัย เพื่อคุณภาพชีวิต" icon={require('./assets/suth.png')} phone={dbData["โรงพยาบาลมหาวิทยาลัยเทคโนโลยีสุรนารี"]?.phone} reporterId={reporterId} />
     <ContactItem title="โรงพยาบาลริมลิฟวิ่ง" subtitle="ผู้เชี่ยวชาญด้านการฟื้นฟู และการดูแลผู้สูงอายุ เพื่อคุณภาพชีวิต" icon={require('./assets/rim.png')} phone={dbData["โรงพยาบาลริมลิฟวิ่ง"]?.phone} reporterId={reporterId} />
@@ -138,7 +138,7 @@ const UtilityHome = ({ dbData, reporterId }) => (
       <ServiceCard title="ศูนย์เตือนภัยพิบัติแห่งชาติ" subtitle="เฝ้าระวัง แจ้งเตือนภัยธรรมชาติล่วงหน้า " icon={require('./assets/ppb.png')} phone={dbData["ศูนย์เตือนภัยพิบัติแห่งชาติ"]?.phone} reporterId={reporterId} />
     </View>
     <Text style={styles.sectionTitle}>เบอร์ติดต่ออื่นๆ</Text>
-    <ContactItem title="การไฟฟ้าส่วนภูมิภาคเขต 3" subtitle="มาตรฐานบริการด้านพลังงาน สร้างสรรค์ความสว่างไสวให้ภูมิภาค" icon={require('./assets/phifa.png')} phone={dbData["การไฟฟ้าส่วนภูมิภาคเขต 3"]?.phone} reporterId={reporterId} />
+    <ContactItem title="การไฟฟ้าส่วนภูมิภาค" subtitle="จัดหาและจำหน่ายพลังงานไฟฟ้า" icon={require('./assets/phifa.png')} phone={dbData["การไฟฟ้าส่วนภูมิภาค"]?.phone} reporterId={reporterId} />
     <ContactItem title="ชมรมจิตอาสาแสดทอง " subtitle="พลังแห่งการแบ่งปัน สร้างสรรค์ความสุขเพื่อสังคม" icon={require('./assets/sutv.png')} phone={dbData["ชมรมจิตอาสาแสดทอง "]?.phone} reporterId={reporterId} />
     <ContactItem title="ศูนย์กู้ภัยฮุก 31 " subtitle="บรรเทาสาธารณภัย มั่นใจในการบริการเคียงข้างทุกข์สุขชาวนครราชสีมา" icon={require('./assets/huk.png')} phone={dbData["ศูนย์กู้ภัยฮุก 31 "]?.phone} reporterId={reporterId} />
     <ContactItem title="สำนักงานกรมทางหลวงที่ 10 นครราชสีมา " subtitle="ประตูสู่เส้นทางที่ปลอดภัย พัฒนาโครงข่ายเพื่อความสะดวกของคนไทย" icon={require('./assets/sumnak.png')} phone={dbData["สำนักงานกรมทางหลวงที่ 10 นครราชสีมา "]?.phone} reporterId={reporterId} />
