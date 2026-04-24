@@ -16,8 +16,8 @@ import ProfileScreen from './ProfileScreen';
 import MapScreen from './MapScreen';
 import AdminHomeScreen from './AdminHomeScreen';
 import ManageContactScreen from './ManageContactScreen';
+import ManageFacilitiesScreen from './ManageFacilitiesScreen'; 
 import ManageUserScreen from './ManageUserScreen'; // ✅ เพิ่ม Import หน้าจัดการผู้ใช้
-
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState('Welcome1');
   const [selectedPlace, setSelectedPlace] = useState(null);
@@ -33,8 +33,11 @@ export default function App() {
     search: () => setCurrentScreen('Search'),
     profile: () => setCurrentScreen('Profile'),
     admin: () => setCurrentScreen('AdminHome'),
-    manageContact: () => setCurrentScreen('ManageContact'),
-    manageUser: () => setCurrentScreen('ManageUser'), // ✅ เพิ่มเส้นทางใหม่
+    manageContact: () => setCurrentScreen('ManageContact'), 
+    manageFacilities: () => setCurrentScreen('ManageFacilities'),
+     manageUser: () => setCurrentScreen('ManageUser'), // ✅ เพิ่มเส้นทางใหม่
+  
+    
   };
 
   // --- Welcome Screens ---
@@ -123,8 +126,9 @@ if (currentScreen === 'ForgotPassword') {
         onLogout={() => setCurrentScreen('Login')}
         onGoHome={navigateTo.admin}
         onGoSOS={navigateTo.manageContact} 
-        onGoSearch={navigateTo.manageContact} 
-        onGoProfile={navigateTo.manageUser}
+       onGoSearch={navigateTo.manageFacilities}
+        onGoProfile={navigateTo.profile}
+        onManageFacilities={navigateTo.manageFacilities}
       />
     );
   }
@@ -134,14 +138,22 @@ if (currentScreen === 'ForgotPassword') {
       <ManageContactScreen 
         onGoHome={navigateTo.admin}
         onGoSOS={navigateTo.manageContact}
-        onGoSearch={navigateTo.manageContact}
-        onGoProfile={navigateTo.manageUser}
+       onGoSearch={navigateTo.manageFacilities}
+        onGoProfile={navigateTo.profile}
       />
     );
   }
-
-  // ✅ เพิ่มหน้า ManageUser เข้าไปใน Flow
-  if (currentScreen === 'ManageUser') {
+  if (currentScreen === 'ManageFacilities') {
+    return (
+      <ManageFacilitiesScreen 
+        onGoHome={navigateTo.admin}
+        onGoSOS={navigateTo.manageContact}
+        onGoSearch={navigateTo.manageFacilities}
+        onGoProfile={navigateTo.profile}
+      />
+    );
+  }
+    if (currentScreen === 'ManageUser') {
     return (
       <ManageUserScreen 
         onGoHome={navigateTo.admin}
@@ -151,6 +163,7 @@ if (currentScreen === 'ForgotPassword') {
       />
     );
   }
+
 
   // --- Main App Screens ---
   if (currentScreen === 'Search') {
