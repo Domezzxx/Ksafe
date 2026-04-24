@@ -108,14 +108,14 @@ const Login = ({ onLogin, onRegister, onForgotPassword }) => {
 
             <TouchableOpacity style={styles.primaryButton} onPress={handleLogin} disabled={loading}>
               {loading ? (
-                <ActivityIndicator color="#FFF" />
+                <ActivityIndicator color="#F48E54" />
               ) : (
                 <Text style={styles.buttonText}>เข้าสู่ระบบ</Text>
               )}
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.secondaryButton} onPress={onRegister}>
-              <Text style={styles.buttonText}>สร้างบัญชีใหม่</Text>
+              <Text style={styles.buttonText}>สมัครสมาชิก</Text>
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   forgotPasswordText: {
-    color: '#A0A0A0',
+    color: '#F48E54',
     fontSize: 14,
   },
   primaryButton: {
@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   secondaryButton: {
-    backgroundColor: '#B0B0B0',
+    backgroundColor: '#F48E54',
     borderRadius: 25,
     paddingVertical: 15,
     alignItems: 'center',
