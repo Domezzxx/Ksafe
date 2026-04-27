@@ -6,14 +6,14 @@ import MapView, { Marker } from 'react-native-maps';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 
-// --- นำเข้า Firebase Auth และ Firestore ---
-import { signOut, onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore'; 
-import { db, auth } from './firebaseConfig'; 
+// --- นำเข้า Firestore (ไม่ใช้ Firebase Auth เพราะระบบเช็ค login ผ่าน Firestore เอง) ---
+import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore'; 
+import { db } from './firebaseConfig'; 
 
-export default function ProfileScreen({ onGoHome, onGoSOS, onGoSearch, onGoProfile, onLogout, onUpdateContact }) {
+export default function ProfileScreen({ currentUserPhone, onGoHome, onGoSOS, onGoSearch, onGoProfile, onLogout, onUpdateContact }) {
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [userDocId, setUserDocId] = useState(null); // เก็บ document id ของ user ใน Firestore
   
   const [showEmergencyModal, setShowEmergencyModal] = useState(false);
   const [showPickerModal, setShowPickerModal] = useState(false);
@@ -43,35 +43,50 @@ export default function ProfileScreen({ onGoHome, onGoSOS, onGoSearch, onGoProfi
     profileImage: 'https://cdn-icons-png.flaticon.com/512/149/149071.png'
   });
 
-  // --- 1. ดึงข้อมูลจาก Firestore เมื่อโหลดหน้านี้ ---
+  // --- 1. ดึงข้อมูลจาก Firestore โดยใช้เบอร์โทรศัพท์ที่ส่งมาจาก App.js ---
   useEffect(() => {
-    // ใช้ onAuthStateChanged เพื่อรอให้ระบบเช็ค User ให้เสร็จก่อนดึงข้อมูล
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        try {
-          const userDocRef = doc(db, 'users', user.uid);
-          const docSnap = await getDoc(userDocRef);
-          
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            setProfile(prev => ({ ...prev, ...data }));
-            
-            if (data.emergencyContact && onUpdateContact) {
-              onUpdateContact(data.emergencyContact);
-            }
-          }
-        } catch (error) {
-          console.error("Error fetching user data:", error);
-        } finally {
-          setLoading(false); 
-        }
-      } else {
-        setLoading(false); 
+    const fetchUserData = async () => {
+      // ถ้าไม่มีเบอร์โทรส่งมา ไม่ต้องทำอะไร (อาจจะยังไม่ได้ login)
+      if (!currentUserPhone) {
+        console.warn("ไม่ได้รับเบอร์โทรศัพท์ของผู้ใช้ - กรุณาเช็คว่าส่ง prop currentUserPhone มาจาก App.js แล้ว");
+        setLoading(false);
+        return;
       }
-    });
 
-    return () => unsubscribe();
-  }, []);
+      try {
+        // ค้นหา document ใน collection 'users' ที่มี phone_number ตรงกับเบอร์ที่ login
+        const usersRef = collection(db, 'users');
+        const q = query(usersRef, where('phone_number', '==', currentUserPhone));
+        const snapshot = await getDocs(q);
+
+        if (!snapshot.empty) {
+          const userDoc = snapshot.docs[0];
+          setUserDocId(userDoc.id); // เก็บ doc id ไว้ใช้ตอนบันทึก/แก้ไข
+          
+          const data = userDoc.data();
+          // รวมข้อมูลจาก firestore เข้ากับ profile state
+          // หมายเหตุ: ใน firestore ใช้ key 'phone_number' แต่ใน state ใช้ 'phone'
+          setProfile(prev => ({ 
+            ...prev, 
+            ...data,
+            phone: data.phone_number || currentUserPhone, // map phone_number → phone
+          }));
+
+          if (data.emergencyContact && onUpdateContact) {
+            onUpdateContact(data.emergencyContact);
+          }
+        } else {
+          console.warn("ไม่พบข้อมูลผู้ใช้ที่มีเบอร์:", currentUserPhone);
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [currentUserPhone]);
 
   const calculateAge = (bDate) => {
     try {
@@ -93,19 +108,12 @@ export default function ProfileScreen({ onGoHome, onGoSOS, onGoSearch, onGoProfi
     setShowLogoutModal(true);
   };
 
-  // ✅ ยืนยันออกจากระบบจริง (เรียกเมื่อกดปุ่มใน Modal)
+  // ✅ ยืนยันออกจากระบบจริง (ไม่ต้องเรียก signOut เพราะระบบนี้ไม่ได้ใช้ Firebase Auth)
   const confirmLogout = () => {
     setShowLogoutModal(false);
-    signOut(auth)
-      .then(() => {
-        if (onLogout) {
-          onLogout();
-        }
-      })
-      .catch((error) => {
-        console.error("เกิดข้อผิดพลาดในการออกจากระบบ:", error);
-        Alert.alert("ผิดพลาด", "ไม่สามารถออกจากระบบได้ กรุณาลองใหม่อีกครั้ง");
-      });
+    if (onLogout) {
+      onLogout(); // App.js จะเคลียร์ userPhone, userRole และพากลับไปหน้า Login
+    }
   };
 
   const emergencyOptions = [
@@ -171,25 +179,29 @@ export default function ProfileScreen({ onGoHome, onGoSOS, onGoSearch, onGoProfi
     }
   };
 
-  // --- 2. บันทึกข้อมูลลง Firestore ---
+  // --- 2. บันทึกข้อมูลลง Firestore (ใช้ userDocId ที่เก็บไว้ตอนโหลด) ---
   const confirmSave = async () => {
     setShowConfirmModal(false); 
-    
-    const user = auth.currentUser;
 
-    if (user) {
-      try {
-        const userDocRef = doc(db, 'users', user.uid);
-        await setDoc(userDocRef, profile, { merge: true });
-        
-        setIsEditing(false); 
-        Alert.alert("สำเร็จ", "บันทึกข้อมูลเรียบร้อยแล้ว");
-      } catch (error) {
-        console.error("Error saving profile:", error);
-        Alert.alert("ผิดพลาด", "เกิดข้อผิดพลาดในการบันทึกข้อมูล");
-      }
-    } else {
-      Alert.alert("แจ้งเตือน", "ไม่พบข้อมูลผู้ใช้ กรุณาเข้าสู่ระบบอีกครั้ง");
+    if (!userDocId) {
+      Alert.alert("ผิดพลาด", "ไม่พบข้อมูลผู้ใช้ กรุณาเข้าสู่ระบบอีกครั้ง");
+      return;
+    }
+
+    try {
+      const userDocRef = doc(db, 'users', userDocId);
+      
+      // แยก phone ออก เพราะใน Firestore ใช้ key 'phone_number' (ไม่อัปเดต field นี้)
+      // และไม่อัปเดต password กับ role เพื่อความปลอดภัย
+      const { phone, password, role, ...profileToSave } = profile;
+      
+      await updateDoc(userDocRef, profileToSave);
+      
+      setIsEditing(false); 
+      Alert.alert("สำเร็จ", "บันทึกข้อมูลเรียบร้อยแล้ว");
+    } catch (error) {
+      console.error("Error saving profile:", error);
+      Alert.alert("ผิดพลาด", "เกิดข้อผิดพลาดในการบันทึกข้อมูล");
     }
   };
 
@@ -470,8 +482,9 @@ export default function ProfileScreen({ onGoHome, onGoSOS, onGoSearch, onGoProfi
                 style={styles.emergencyItemCard}
                 onPress={() => {
                   setProfile({ ...profile, emergencyContact: item });
-                  if (auth.currentUser) {
-                    setDoc(doc(db, 'users', auth.currentUser.uid), { emergencyContact: item }, { merge: true });
+                  if (userDocId) {
+                    updateDoc(doc(db, 'users', userDocId), { emergencyContact: item })
+                      .catch(err => console.error("Error updating emergency contact:", err));
                   }
                   if (onUpdateContact) {
                      onUpdateContact(item);
