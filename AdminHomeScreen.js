@@ -1,200 +1,176 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  Dimensions,
   SafeAreaView,
   Image,
-  Alert,
-  StatusBar
+  ActivityIndicator,
+  Dimensions
 } from 'react-native';
-import { Plus, Minus, LogOut, TrendingUp, Activity, Users } from 'lucide-react-native';
+import MapView, { Marker, Circle, Callout, PROVIDER_GOOGLE } from 'react-native-maps';
 
-const AdminHomeScreen = ({ onGoHome, onGoSOS, onGoSearch, onGoProfile, onLogout }) => {
+// เชื่อมต่อ Firebase (ตรวจสอบชื่อไฟล์ config ของคุณด้วย)
+import { db } from './firebaseConfig'; 
+import { collection, onSnapshot, query } from 'firebase/firestore';
 
-  const handleLogout = () => {
-    Alert.alert(
-      "ยืนยันการออกจากระบบ",
-      "คุณต้องการออกจากระบบ Admin ใช่หรือไม่?",
-      [
-        { text: "ยกเลิก", style: "cancel" },
-        { 
-          text: "ออกจากระบบ", 
-          onPress: onLogout, 
-          style: "destructive" 
+const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile, onGoToSorting }) => {
+  const [incidents, setIncidents] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // ดึงข้อมูล Real-time จากคอลเลกชัน incident_reports
+    const q = query(collection(db, 'incident_reports')); 
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => {
+        const item = doc.data();
+        // ถ้าใน Firebase ไม่มี severity ให้คำนวณจาก count (ตามภาพที่คุณเคยส่งมา)
+        let sev = item.severity;
+        if (!sev) {
+          sev = item.count >= 10 ? 'high' : item.count >= 5 ? 'medium' : 'low';
         }
-      ]
-    );
+        return { id: doc.id, ...item, severity: sev };
+      });
+      setIncidents(data);
+      setLoading(false);
+    }, (error) => {
+      console.error("Firebase Error:", error);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const getStyle = (sev) => {
+    switch (sev) {
+      case 'high': return { color: 'rgba(239, 68, 68, 0.4)', solid: '#EF4444', label: 'เสี่ยงสูง' };
+      case 'medium': return { color: 'rgba(245, 158, 11, 0.4)', solid: '#F59E0B', label: 'ปานกลาง' };
+      default: return { color: 'rgba(250, 204, 21, 0.4)', solid: '#FACC15', label: 'เฝ้าระวัง' };
+    }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 120 }}
-      >
-        {/* Header Section */}
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
         <View style={styles.header}>
-          <View style={styles.headerTop}>
-            <View>
-              <Text style={styles.headerTitle}>Ksafe Admin</Text>
-              <Text style={styles.headerSubtitle}>ระบบจัดการแดชบอร์ด</Text>
-            </View>
-            <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
-              <LogOut size={22} color="#EF4444" />
-            </TouchableOpacity>
+          <View>
+            <Text style={styles.headerTitle}>Ksafe Admin</Text>
+            <Text style={styles.headerSubtitle}>แดชบอร์ดพิกัดความเสี่ยง</Text>
           </View>
-        </View>
-
-        {/* Stats Grid */}
-        <View style={styles.statsRow}>
-          <View style={[styles.card, styles.cardMain]}>
-            <View style={styles.cardHeaderIcon}>
-              <Users size={20} color="rgba(255,255,255,0.8)" />
-            </View>
-            <Text style={styles.cardLabel}>ผู้ใช้ใหม่รายเดือน</Text>
-            <Text style={styles.cardValueLarge}>1,284</Text>
-            <View style={styles.trendBadge}>
-              <TrendingUp size={12} color="#FFF" />
-              <Text style={styles.trendText}>+12%</Text>
-            </View>
-          </View>
-
-          <View style={styles.statsColumn}>
-            <View style={[styles.card, styles.cardRed]}>
-              <Text style={styles.cardLabelSmall}>เหตุการณ์ด่วน</Text>
-              <Text style={styles.cardValueSmall}>42</Text>
-            </View>
-            <View style={[styles.card, styles.cardBlue]}>
-              <Text style={styles.cardLabelSmall}>สรุปเหตุการณ์</Text>
-              <Text style={styles.cardValueSmall}>856</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Map Visualization */}
-        <View style={styles.sectionHeader}>
-          <View style={styles.sectionTitleRow}>
-            <Activity size={18} color="#4B5563" />
-            <Text style={styles.sectionTitle}>พื้นที่เฝ้าระวังพิเศษ</Text>
-          </View>
+          <TouchableOpacity onPress={onLogout} style={styles.logoutBtn}>
+            <Text style={styles.logoutText}>ออกจากระบบ</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.mapWrapper}>
-          <View style={styles.mapCanvas}>
-            {/* Simulated Heatmap Dots */}
-            <View style={[styles.heatDot, { top: '35%', left: '25%', backgroundColor: 'rgba(239, 68, 68, 0.6)', width: 60, height: 60 }]} />
-            <View style={[styles.heatDot, { top: '60%', left: '55%', backgroundColor: 'rgba(249, 115, 22, 0.5)', width: 45, height: 45 }]} />
-            
-            <View style={styles.mapControls}>
-              <TouchableOpacity style={styles.zoomBtn}><Plus size={18} color="#4B5563" /></TouchableOpacity>
-              <View style={styles.divider} />
-              <TouchableOpacity style={styles.zoomBtn}><Minus size={18} color="#4B5563" /></TouchableOpacity>
+          {loading ? (
+            <View style={styles.loaderBox}>
+              <ActivityIndicator size="large" color="#F87C47" />
+              <Text style={{ marginTop: 10, color: '#999' }}>กำลังโหลดพิกัด...</Text>
             </View>
-          </View>
+          ) : (
+            <MapView
+              provider={PROVIDER_GOOGLE}
+              style={styles.map}
+              initialRegion={{
+                latitude: 14.9071,
+                longitude: 102.0040,
+                latitudeDelta: 0.05,
+                longitudeDelta: 0.05,
+              }}
+            >
+              {incidents.map((item) => {
+                const config = getStyle(item.severity);
+                // ตรวจสอบพิกัดว่าเป็นตัวเลขหรือไม่
+                const lat = parseFloat(item.latitude);
+                const lng = parseFloat(item.longitude);
+
+                if (isNaN(lat) || isNaN(lng)) return null;
+
+                return (
+                  <React.Fragment key={item.id}>
+                    <Circle center={{ latitude: lat, longitude: lng }} radius={400} fillColor={config.color} strokeColor="transparent" />
+                    <Marker coordinate={{ latitude: lat, longitude: lng }}>
+                      <View style={[styles.markerDot, { backgroundColor: config.solid }]} />
+                      <Callout tooltip onPress={() => onGoToSorting(item.severity)}>
+                        <View style={styles.calloutBox}>
+                          <Text style={styles.calloutTitle}>{config.label}</Text>
+                          <Text style={styles.calloutText}>{item.service_name || 'แจ้งเหตุ SOS'}</Text>
+                          <View style={[styles.goBtn, { backgroundColor: config.solid }]}>
+                            <Text style={styles.goBtnText}>ดูหน้ารายการ</Text>
+                          </View>
+                        </View>
+                      </Callout>
+                    </Marker>
+                  </React.Fragment>
+                );
+              })}
+            </MapView>
+          )}
         </View>
 
-        {/* Reports Section */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>สรุปรายงานสายด่วน</Text>
+        <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>สรุปรายงานประจำวัน</Text></View>
+        <View style={{ paddingHorizontal: 20 }}>
+          <ReportRow icon="🚨" title="เหตุเสี่ยงสูง" count={incidents.filter(i => i.severity === 'high').length} />
+          <ReportRow icon="⚠️" title="เหตุเฝ้าระวัง" count={incidents.filter(i => i.severity !== 'high').length} />
         </View>
-        
-        <ReportItem icon="🚔" title="กรมทางหลวง" count="3 ครั้ง" subtitle="อุบัติเหตุบนท้องถนน" />
-        <ReportItem icon="📞" title="สายด่วนตำรวจ" count="120 ครั้ง" subtitle="รับแจ้งเหตุด่วนเหตุร้าย" />
-
       </ScrollView>
 
-      {/* Navigation Footer */}
+      {/* Admin Footer Navigation */}
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.footerButton} onPress={onGoHome}>
-          <Image source={require('./assets/home (2).png')} style={[styles.footerIcon, { tintColor: '#F87C47' }]} />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.footerButton} onPress={onGoSOS}>
-          <Image source={require('./assets/emergency (1).png')} style={[styles.footerIcon, { tintColor: '#929292' }]} />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.footerButton} onPress={onGoSearch}>
-          <Image source={require('./assets/map (1).png')} style={[styles.footerIcon, { tintColor: '#929292' }]} />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.footerButton} onPress={onGoProfile}>
-          <Image source={require('./assets/user.png')} style={[styles.footerIcon, { tintColor: '#D9D9D9' }]} />
-        </TouchableOpacity>
+        <FooterTab icon={require('./assets/home (2).png')} active onPress={onGoHome} />
+        <FooterTab icon={require('./assets/emergency (1).png')} onPress={onGoSOS} />
+        <FooterTab icon={require('./assets/map (1).png')} onPress={onGoSearch} />
+        <FooterTab icon={require('./assets/user.png')} onPress={onGoProfile} />
       </View>
     </SafeAreaView>
   );
 };
 
-const ReportItem = ({ icon, title, count, subtitle }) => (
-  <View style={styles.reportRow}>
-    <View style={styles.reportLeftSide}>
-      <View style={styles.reportIconBg}>
-        <Text style={{ fontSize: 20 }}>{icon}</Text>
-      </View>
-      <View>
-        <Text style={styles.reportTitleText}>{title}</Text>
-        <Text style={styles.reportSubtitleText}>{subtitle}</Text>
-      </View>
+// --- Sub Components ---
+const ReportRow = ({ icon, title, count }) => (
+  <View style={styles.row}>
+    <View style={styles.rowLeft}>
+      <View style={styles.iconBg}><Text>{icon}</Text></View>
+      <Text style={styles.rowTitle}>{title}</Text>
     </View>
-    <View style={styles.countBadge}>
-      <Text style={styles.reportCountText}>{count}</Text>
-    </View>
+    <Text style={styles.rowCount}>{count} รายการ</Text>
   </View>
 );
 
+const FooterTab = ({ icon, active, onPress }) => (
+  <TouchableOpacity style={styles.fBtn} onPress={onPress}>
+    <Image source={icon} style={[styles.fIcon, { tintColor: active ? '#F87C47' : '#D1D5DB' }]} />
+  </TouchableOpacity>
+);
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F3F4F6' },
-  header: { paddingHorizontal: 25, paddingTop: 15, marginBottom: 20 },
-  headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  headerTitle: { fontSize: 26, fontWeight: 'bold', color: '#111827' },
-  headerSubtitle: { fontSize: 16, color: '#6B7280', marginTop: 2 },
-  logoutBtn: { 
-    width: 45, 
-    height: 45, 
-    backgroundColor: '#FFF', 
-    borderRadius: 14, 
-    justifyContent: 'center', 
-    alignItems: 'center',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  statsRow: { flexDirection: 'row', paddingHorizontal: 20, gap: 12 },
-  statsColumn: { flex: 1, gap: 12 },
-  card: { borderRadius: 24, padding: 16, justifyContent: 'center', elevation: 3, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8 },
-  cardMain: { backgroundColor: '#F87C47', flex: 1.3, height: 160, position: 'relative', overflow: 'hidden' },
-  cardRed: { backgroundColor: '#EF4444', height: 74 },
-  cardBlue: { backgroundColor: '#3B82F6', height: 74 },
-  cardHeaderIcon: { marginBottom: 10 },
-  cardLabel: { color: 'rgba(255,255,255,0.9)', fontSize: 14, fontWeight: '500' },
-  cardLabelSmall: { color: 'rgba(255,255,255,0.8)', fontSize: 12, marginBottom: 2 },
-  cardValueLarge: { color: '#FFF', fontSize: 38, fontWeight: '800' },
-  cardValueSmall: { color: '#FFF', fontSize: 24, fontWeight: 'bold' },
-  trendBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.2)', alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10, marginTop: 8 },
-  trendText: { color: '#FFF', fontSize: 11, fontWeight: 'bold', marginLeft: 4 },
-  sectionHeader: { paddingHorizontal: 25, marginTop: 30, marginBottom: 15 },
-  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  sectionTitle: { fontSize: 17, fontWeight: '700', color: '#374151' },
-  mapWrapper: { marginHorizontal: 20, height: 200, borderRadius: 28, overflow: 'hidden', backgroundColor: '#E5E7EB', borderWidth: 1, borderColor: '#FFF' },
-  mapCanvas: { flex: 1, backgroundColor: '#D1D5DB' },
-  heatDot: { position: 'absolute', borderRadius: 100 },
-  mapControls: { position: 'absolute', right: 15, top: 15, backgroundColor: '#FFF', borderRadius: 12, elevation: 3 },
-  zoomBtn: { padding: 12, alignItems: 'center' },
-  divider: { height: 1, backgroundColor: '#F3F4F6' },
-  reportRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFF', marginHorizontal: 20, marginBottom: 12, padding: 16, borderRadius: 20, elevation: 1 },
-  reportLeftSide: { flexDirection: 'row', alignItems: 'center', gap: 15 },
-  reportIconBg: { width: 48, height: 48, borderRadius: 16, backgroundColor: '#F9FAFB', justifyContent: 'center', alignItems: 'center' },
-  reportTitleText: { fontSize: 16, fontWeight: '700', color: '#1F2937' },
-  reportSubtitleText: { fontSize: 12, color: '#9CA3AF' },
-  countBadge: { backgroundColor: '#F3F4F6', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
-  reportCountText: { fontSize: 13, fontWeight: '800', color: '#4B5563' },
-  footer: { position: 'absolute', bottom: 0, flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', width: '100%', height: 90, backgroundColor: '#FFF', borderTopWidth: 1, borderTopColor: '#F3F4F6', paddingBottom: 25, elevation: 20 },
-  footerButton: { padding: 10, flex: 1, alignItems: 'center' },
-  footerIcon: { width: 26, height: 26 }
+  container: { flex: 1, backgroundColor: '#F9FAFB' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 25 },
+  headerTitle: { fontSize: 24, fontWeight: 'bold' },
+  headerSubtitle: { fontSize: 14, color: '#666' },
+  logoutBtn: { padding: 8, backgroundColor: '#FFF', borderRadius: 10, borderWidth: 1, borderColor: '#EEE' },
+  logoutText: { fontSize: 12, color: '#EF4444', fontWeight: 'bold' },
+  mapWrapper: { marginHorizontal: 20, height: 380, borderRadius: 25, overflow: 'hidden', elevation: 4, backgroundColor: '#EEE' },
+  map: { ...StyleSheet.absoluteFillObject },
+  loaderBox: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  markerDot: { width: 14, height: 14, borderRadius: 7, borderWidth: 3, borderColor: '#FFF' },
+  calloutBox: { width: 150, backgroundColor: '#FFF', borderRadius: 15, padding: 12, alignItems: 'center' },
+  calloutTitle: { fontWeight: 'bold', fontSize: 13 },
+  calloutText: { fontSize: 11, color: '#666', marginVertical: 4 },
+  goBtn: { marginTop: 5, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 5 },
+  goBtnText: { color: '#FFF', fontSize: 10, fontWeight: 'bold' },
+  sectionHeader: { padding: 25, paddingBottom: 10 },
+  sectionTitle: { fontSize: 15, fontWeight: 'bold', color: '#444' },
+  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFF', padding: 15, borderRadius: 20, marginBottom: 10 },
+  rowLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  iconBg: { width: 35, height: 35, borderRadius: 10, backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center' },
+  rowTitle: { fontSize: 14, fontWeight: '600' },
+  rowCount: { fontSize: 12, color: '#F87C47', fontWeight: 'bold' },
+  footer: { position: 'absolute', bottom: 0, flexDirection: 'row', width: '100%', height: 85, backgroundColor: '#FFF', borderTopWidth: 1, borderColor: '#F0F0F0', paddingBottom: 20 },
+  fBtn: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  fIcon: { width: 22, height: 22 }
 });
 
 export default AdminHomeScreen;
