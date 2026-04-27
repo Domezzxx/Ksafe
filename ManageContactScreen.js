@@ -150,7 +150,7 @@ export default function ManageContactScreen({
           {/* ส่วนหัว */}
           <View style={styles.header}>
                   <Text style={styles.brandText}>Ksafe</Text>
-                  <Text style={styles.titleText}>จัดการสถานที่</Text>
+                  <Text style={styles.titleText}>จัดการเบอร์สถานที่</Text>
                 </View>
 
           {/* แถบค้นหา */}
