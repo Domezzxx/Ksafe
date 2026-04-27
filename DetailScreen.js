@@ -6,11 +6,11 @@ import {
 
 const { width } = Dimensions.get('window');
 
-// 💡 1. Image Map จับคู่ชื่อสถานที่ (ตรวจสอบชื่อให้ตรงกับ Firebase)
+// 💡 1. Image Map สำหรับรูปที่เก็บไว้ในโปรเจกต์ (Assets)
 const locationImages = {
   "โรงพยาบาลมหาวิทยาลัยเทคโนโลยีสุรนารี": require('./assets/sut.jpg'),
   "PCU-SUT (ศูนย์แพทย์ชุมชน)": require('./assets/pcu.png'),
-  "PCU-SUT (ศูนย์บริการสุขภาพ มทส.)": require('./assets/pcu.png'), // เพิ่มเผื่อชื่อใน Log
+  "PCU-SUT (ศูนย์บริการสุขภาพ มทส.)": require('./assets/pcu.png'),
   "โรงพยาบาลราชสีมา ฮอสพิทอล": require('./assets/ratchasimahospital.png'),
   "โรงพยาบาลกรุงเทพนครราชสีมา": require('./assets/kungthep.png'),
   "โรงพยาบาลริมลิฟวิ่ง": require('./assets/rim.png'),
@@ -30,10 +30,27 @@ const defaultImage = require('./assets/sut.jpg');
 
 export default function DetailScreen({ data, onBack, onPressMap }){
   
-  // ดึงรูปภาพตามชื่อ หรือใช้รูปสำรอง
-  const imageUrl = locationImages[data?.ชื่อ] || defaultImage;
+  // 💡 การตัดสินใจเลือกรูปภาพ (ปรับปรุงใหม่)
+  const getImageUrl = () => {
+    // 1. ตรวจสอบฟิลด์ "รูปภาพ" (จากหน้าที่เราทำ Base64/Firestore)
+    if (data?.รูปภาพ) {
+      return { uri: data.รูปภาพ };
+    }
+    // 2. ถ้ามี imageUrl (จาก Google API หรือแหล่งอื่น)
+    if (data?.imageUrl) {
+      return { uri: data.imageUrl };
+    }
+    // 3. ถ้าไม่มี ให้ไปเช็คในลิสต์ชื่อที่จับคู่ไว้ (Assets)
+    if (locationImages[data?.ชื่อ]) {
+      return locationImages[data?.ชื่อ];
+    }
+    // 4. ถ้าไม่เข้าพวกเลย ให้ใช้รูป Default
+    return defaultImage;
+  };
 
-  // รวมชื่อฟิลด์เบอร์โทรจาก Firebase (ป้องกัน Error จาก Log ที่คุณส่งมา)
+  const imageUrl = getImageUrl();
+
+  // ตรวจสอบเบอร์โทรศัพท์ (รองรับทั้งสองชื่อฟิลด์)
   const phoneNumber = data?.เบอร์โทร || data?.เบอร์โทรติดต่อ || "";
 
   const handleCall = (number) => {
@@ -47,7 +64,7 @@ export default function DetailScreen({ data, onBack, onPressMap }){
   const handleOpenInternalMap = () => {
     if (data?.พิกัด) {
       onPressMap({
-        ชื่อ: data.ชื่อ, // ส่งค่าให้ตรงกับที่ MapScreen รอรับ
+        ชื่อ: data.ชื่อ,
         พิกัด: data.พิกัด,
       });
     } else {
@@ -78,7 +95,7 @@ export default function DetailScreen({ data, onBack, onPressMap }){
           {/* สถานะและระยะทาง */}
           <View style={styles.statusRow}>
             <Text style={styles.statusText}>เปิดอยู่</Text>
-            <Text style={styles.distanceText}> | 2 กม.</Text>
+            <Text style={styles.distanceText}> | ข้อมูลสถานที่</Text>
           </View>
 
           {/* ชื่อสถานที่ */}
@@ -112,7 +129,7 @@ const styles = StyleSheet.create({
   headerImage: { width: '100%', height: '100%' },
   backButton: { 
     position: 'absolute', top: 50, left: 15, zIndex: 10, 
-    backgroundColor: 'rgba(255,255,255,0.8)', borderRadius: 20, 
+    backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: 20, 
     width: 40, height: 40, justifyContent: 'center', alignItems: 'center',
     elevation: 5, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 3
   },
