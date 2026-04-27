@@ -4,14 +4,13 @@ import {
   Image, StyleSheet, ScrollView, ActivityIndicator,
   Alert, Dimensions, SafeAreaView, KeyboardAvoidingView, Platform
 } from 'react-native';
-// ✅ นำเข้า GeoPoint จาก firestore
 import { collection, query, onSnapshot, addDoc, updateDoc, doc, deleteDoc, GeoPoint } from 'firebase/firestore';
 import { db } from './firebaseConfig';
-import { ChevronLeft, Edit3, Trash2, Plus, ChevronDown, MapPin } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { ChevronLeft, Edit3, Trash2, Plus, ChevronDown, Camera } from 'lucide-react-native';
 import MapView, { Marker } from 'react-native-maps';
 
 const { width } = Dimensions.get('window');
-
 const INITIAL_REGION = {
   latitude: 14.9744,
   longitude: 102.0978,
@@ -33,6 +32,7 @@ export default function ManageFacilitiesScreen({ onGoHome, onGoSOS, onGoSearch, 
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [type, setType] = useState('โรงพยาบาล');
+  const [image, setImage] = useState(null); 
   const [loading, setLoading] = useState(false);
   const [region, setRegion] = useState(INITIAL_REGION);
 
@@ -44,6 +44,20 @@ export default function ManageFacilitiesScreen({ onGoHome, onGoSOS, onGoSearch, 
     });
     return () => unsubscribe();
   }, []);
+
+  const pickImage = async () => {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.2, // บีบอัดรูปเพื่อประหยัดพื้นที่ Firestore
+      base64: true,
+    });
+
+    if (!result.canceled) {
+      setImage(`data:image/jpeg;base64,${result.assets[0].base64}`);
+    }
+  };
 
   const handleSave = async () => {
     if (!name || !phone || !address) {
@@ -57,8 +71,8 @@ export default function ManageFacilitiesScreen({ onGoHome, onGoSOS, onGoSearch, 
         เบอร์โทร: phone,
         ที่อยู่: address,
         ประเภท: type,
-        // ✅ แก้ไขให้บันทึกเป็น GeoPoint
         พิกัด: new GeoPoint(region.latitude, region.longitude),
+        รูปภาพ: image, 
       };
 
       if (editId) {
@@ -70,7 +84,7 @@ export default function ManageFacilitiesScreen({ onGoHome, onGoSOS, onGoSearch, 
       }
       resetForm();
     } catch (error) {
-      Alert.alert("ผิดพลาด", error.message);
+      Alert.alert("ผิดพลาด", "ขนาดรูปอาจใหญ่เกินไป กรุณาลองใช้รูปอื่น");
     } finally {
       setLoading(false);
     }
@@ -78,8 +92,7 @@ export default function ManageFacilitiesScreen({ onGoHome, onGoSOS, onGoSearch, 
 
   const resetForm = () => {
     setName(''); setPhone(''); setAddress(''); setEditId(null); setType('โรงพยาบาล');
-    setRegion(INITIAL_REGION);
-    setIsManageMode(false);
+    setImage(null); setRegion(INITIAL_REGION); setIsManageMode(false);
   };
 
   const openEdit = (item) => {
@@ -87,26 +100,10 @@ export default function ManageFacilitiesScreen({ onGoHome, onGoSOS, onGoSearch, 
     setPhone(item.เบอร์โทร);
     setAddress(item.ที่อยู่);
     setType(item.ประเภท || 'โรงพยาบาล');
+    setImage(item.รูปภาพ || null);
     setEditId(item.id);
-    
     if (item.พิกัด) {
-      // ✅ ตรวจสอบว่าเป็น GeoPoint หรือ Array แบบเก่า
-      let lat = INITIAL_REGION.latitude;
-      let lng = INITIAL_REGION.longitude;
-
-      if (item.พิกัด.latitude !== undefined) {
-        lat = item.พิกัด.latitude;
-        lng = item.พิกัด.longitude;
-      } else if (Array.isArray(item.พิกัด)) {
-        lat = item.พิกัด[0];
-        lng = item.พิกัด[1];
-      }
-
-      setRegion({
-        ...INITIAL_REGION,
-        latitude: parseFloat(lat),
-        longitude: parseFloat(lng),
-      });
+      setRegion({ ...INITIAL_REGION, latitude: item.พิกัด.latitude, longitude: item.พิกัด.longitude });
     }
     setIsManageMode(true);
   };
@@ -124,12 +121,7 @@ export default function ManageFacilitiesScreen({ onGoHome, onGoSOS, onGoSearch, 
         <Text style={styles.titleText}>จัดการสถานที่</Text>
       </View>
       <View style={styles.searchBar}>
-        <TextInput 
-          placeholder="ค้นหาในรายการ..." 
-          style={styles.searchInput} 
-          value={searchText} 
-          onChangeText={setSearchText} 
-        />
+        <TextInput placeholder="ค้นหาหน่วยงาน..." style={styles.searchInput} value={searchText} onChangeText={setSearchText} />
       </View>
       <View style={styles.filterRow}>
         <TouchableOpacity style={styles.dropdownBtn} onPress={() => setShowDropdown(!showDropdown)}>
@@ -137,13 +129,13 @@ export default function ManageFacilitiesScreen({ onGoHome, onGoSOS, onGoSearch, 
           <ChevronDown size={20} color="#666" />
         </TouchableOpacity>
         <TouchableOpacity style={styles.addBtn} onPress={() => setIsManageMode(true)}>
-          <Plus size={20} color="#FFF" />
-          <Text style={styles.addBtnText}>เพิ่ม</Text>
+          <Plus size={20} color="#FFF" /><Text style={styles.addBtnText}>เพิ่ม</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 
+  // --- หน้าแสดงรายการ (List Mode) ---
   if (!isManageMode) {
     return (
       <View style={styles.container}>
@@ -165,11 +157,18 @@ export default function ManageFacilitiesScreen({ onGoHome, onGoSOS, onGoSearch, 
             ListHeaderComponent={renderHeader}
             renderItem={({ item }) => (
               <View style={styles.facilityCard}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.facilityName}>{item.ชื่อ}</Text>
-                  <Text style={styles.subText}>📍 {item.ที่อยู่}</Text>
+                {item.รูปภาพ ? (
+                  <Image source={{ uri: item.รูปภาพ }} style={styles.cardImage} />
+                ) : (
+                  <View style={[styles.cardImage, {backgroundColor: '#F5F5F5', justifyContent: 'center', alignItems: 'center'}]}>
+                    <Camera size={20} color="#CCC" />
+                  </View>
+                )}
+                <View style={{ flex: 1, marginLeft: 10 }}>
+                  <Text style={styles.facilityName} numberOfLines={1}>{item.ชื่อ}</Text>
+                  <Text style={styles.subText} numberOfLines={1}>📍 {item.ที่อยู่}</Text>
                 </View>
-                <View style={{ flexDirection: 'row', gap: 10 }}>
+                <View style={{ flexDirection: 'row', gap: 5 }}>
                   <TouchableOpacity onPress={() => openEdit(item)} style={styles.editBtn}><Edit3 size={18} color="#F48E54" /></TouchableOpacity>
                   <TouchableOpacity onPress={() => {
                     Alert.alert("ลบข้อมูล", "ยืนยันการลบ?", [
@@ -183,16 +182,19 @@ export default function ManageFacilitiesScreen({ onGoHome, onGoSOS, onGoSearch, 
             contentContainerStyle={{ paddingBottom: 100 }}
           />
         </SafeAreaView>
+
+        {/* ✅ Footer นำกลับมาใส่ตรงนี้ */}
         <View style={styles.footer}>
-            <TouchableOpacity onPress={onGoHome}><Image source={require('./assets/home (2).png')} style={[styles.fIcon, {tintColor: '#ccc'}]} /></TouchableOpacity>
-            <TouchableOpacity onPress={onGoSOS}><Image source={require('./assets/emergency (1).png')} style={[styles.fIcon, {tintColor: '#ccc'}]} /></TouchableOpacity>
-            <TouchableOpacity onPress={onGoSearch}><Image source={require('./assets/map (1).png')} style={[styles.fIcon, {tintColor: '#F48E54'}]} /></TouchableOpacity>
-            <TouchableOpacity onPress={onGoProfile}><Image source={require('./assets/user.png')} style={[styles.fIcon, {tintColor: '#ccc'}]} /></TouchableOpacity>
+          <TouchableOpacity onPress={onGoHome}><Image source={require('./assets/home (2).png')} style={[styles.fIcon, {tintColor: '#ccc'}]} /></TouchableOpacity>
+          <TouchableOpacity onPress={onGoSOS}><Image source={require('./assets/emergency (1).png')} style={[styles.fIcon, {tintColor: '#ccc'}]} /></TouchableOpacity>
+          <TouchableOpacity onPress={onGoSearch}><Image source={require('./assets/map (1).png')} style={[styles.fIcon, {tintColor: '#F48E54'}]} /></TouchableOpacity>
+          <TouchableOpacity onPress={onGoProfile}><Image source={require('./assets/user.png')} style={[styles.fIcon, {tintColor: '#ccc'}]} /></TouchableOpacity>
         </View>
       </View>
     );
   }
 
+  // --- หน้าฟอร์ม (Manage/Edit Mode) ---
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : null} style={styles.container}>
       <SafeAreaView style={{ flex: 1 }}>
@@ -201,29 +203,34 @@ export default function ManageFacilitiesScreen({ onGoHome, onGoSOS, onGoSearch, 
           <Text style={styles.formTitle}>{editId ? 'แก้ไขข้อมูล' : 'เพิ่มข้อมูลใหม่'}</Text>
         </View>
         <ScrollView style={styles.formContent} keyboardShouldPersistTaps="handled">
-          <Text style={styles.label}>ปักหมุดบนแผนที่ (ลากหมุดเพื่อเลื่อน)</Text>
+          
+          <Text style={styles.label}>รูปภาพสถานที่</Text>
+          <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
+            {image ? (
+              <Image source={{ uri: image }} style={styles.previewImage} />
+            ) : (
+              <View style={styles.imagePlaceholder}>
+                <Camera size={40} color="#CCC" />
+                <Text style={{color: '#999'}}>คลิกเพื่อเลือกรูปภาพ</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+
+          <Text style={styles.label}>ปักหมุดบนแผนที่</Text>
           <View style={styles.mapContainer}>
-            <MapView 
-              style={styles.map} 
-              region={region}
-              onPress={(e) => setRegion({...region, ...e.nativeEvent.coordinate})}
-            >
-              <Marker 
-                coordinate={region} 
-                draggable 
-                onDragEnd={(e) => setRegion({...region, ...e.nativeEvent.coordinate})}
-              />
+            <MapView style={styles.map} region={region} onPress={(e) => setRegion({...region, ...e.nativeEvent.coordinate})}>
+              <Marker coordinate={region} draggable onDragEnd={(e) => setRegion({...region, ...e.nativeEvent.coordinate})} />
             </MapView>
           </View>
           
           <Text style={styles.label}>ชื่อสถานที่</Text>
-          <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="ชื่อหน่วยงาน" />
-
+          <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="ระบุชื่อหน่วยงาน" />
+          
           <Text style={styles.label}>เบอร์โทรติดต่อ</Text>
           <TextInput style={styles.input} value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
-
-          <Text style={styles.label}>ที่อยู่โดยละเอียด</Text>
-          <TextInput style={[styles.input, {height: 80}]} value={address} onChangeText={setAddress} multiline placeholder="เลขที่, ถนน, ตำบล..." />
+          
+          <Text style={styles.label}>ที่อยู่</Text>
+          <TextInput style={[styles.input, {height: 60}]} value={address} onChangeText={setAddress} multiline />
 
           <Text style={styles.label}>ประเภทบริการ</Text>
           <View style={styles.typeRow}>
@@ -258,7 +265,8 @@ const styles = StyleSheet.create({
   dropdownItem: { padding: 15, borderBottomWidth: 1, borderBottomColor: '#F5F5F5' },
   addBtn: { backgroundColor: '#F48E54', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 15, borderRadius: 12 },
   addBtnText: { color: '#FFF', fontWeight: 'bold', marginLeft: 5 },
-  facilityCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', marginHorizontal: 20, marginBottom: 10, padding: 15, borderRadius: 15, borderWidth: 1, borderColor: '#F0F0F0' },
+  facilityCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', marginHorizontal: 20, marginBottom: 10, padding: 12, borderRadius: 15, borderWidth: 1, borderColor: '#F0F0F0' },
+  cardImage: { width: 60, height: 60, borderRadius: 10 },
   facilityName: { fontWeight: 'bold', fontSize: 16 },
   subText: { color: '#888', fontSize: 13, marginTop: 4 },
   editBtn: { padding: 10, backgroundColor: '#FFF2EB', borderRadius: 10 },
@@ -267,7 +275,10 @@ const styles = StyleSheet.create({
   formContent: { paddingHorizontal: 20 },
   label: { fontWeight: 'bold', marginTop: 15, marginBottom: 8 },
   input: { borderWidth: 1, borderColor: '#EEE', padding: 12, borderRadius: 12, backgroundColor: '#FAFAFA' },
-  mapContainer: { height: 250, borderRadius: 15, overflow: 'hidden', marginTop: 5 },
+  imagePicker: { width: '100%', height: 180, backgroundColor: '#F9F9F9', borderRadius: 15, borderStyle: 'dashed', borderWidth: 1, borderColor: '#DDD', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
+  previewImage: { width: '100%', height: '100%', resizeMode: 'cover' },
+  imagePlaceholder: { alignItems: 'center' },
+  mapContainer: { height: 180, borderRadius: 15, overflow: 'hidden' },
   map: { flex: 1 },
   typeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   typeTab: { padding: 10, borderRadius: 10, borderWidth: 1, borderColor: '#EEE' },
