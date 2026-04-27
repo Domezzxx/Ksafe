@@ -160,7 +160,7 @@ export default function ManageUserScreen({
         <SafeAreaView style={{ flex: 1 }}>
           <View style={styles.header}>
                             <Text style={styles.brandText}>Ksafe</Text>
-                            <Text style={styles.titleText}>จัดการสถานที่</Text>
+                            <Text style={styles.titleText}>จัดการผู้ใช้</Text>
                           </View>
 
           
