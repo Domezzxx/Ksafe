@@ -2,73 +2,66 @@ import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, SafeAreaView, KeyboardAvoidingView, Platform, Image,
-  Alert, ActivityIndicator
+  Alert, ActivityIndicator // ✅ เพิ่ม Alert และ ActivityIndicator
 } from 'react-native';
 
+// ✅ เพิ่ม import Firebase
 import { db } from './firebaseConfig';
-import { 
-  collection, 
-  query, 
-  where, 
-  getDocs, 
-  doc, 
-  updateDoc 
-} from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
 
-// 💡 รับได้ทั้ง phone และ phoneNumber เพื่อความยืดหยุ่น
-const ResetPassword = ({ onNext, onBack, phone, phoneNumber }) => {
+// ✅ รับ prop phoneNumber เพิ่มเข้ามา (ส่งมาจาก App.js อยู่แล้ว)
+const ResetPassword = ({ onNext, onBack, onResetSuccess, phoneNumber }) => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // กำหนดตัวแปรหลักที่จะใช้ โดยเช็คว่าค่าไหนถูกส่งมา
-  const targetPhone = phone || phoneNumber;
-
-  const handleResetPassword = async () => {
-    // 💡 ป้องกัน Error "Unsupported field value"
-    if (typeof targetPhone !== 'string' || !targetPhone) {
-      Alert.alert('ผิดพลาด', 'ข้อมูลเบอร์โทรศัพท์ไม่ถูกต้อง กรุณาเริ่มทำรายการใหม่');
-      if (onBack) onBack();
+  const handleReset = async () => {
+    // 1. ตรวจสอบข้อมูลเบื้องต้น
+    if (!newPassword || !confirmPassword) {
+      Alert.alert('แจ้งเตือน', 'กรุณากรอกรหัสผ่านให้ครบ');
       return;
     }
-
-    if (!newPassword || !confirmPassword) {
-      Alert.alert('แจ้งเตือน', 'กรุณากรอกข้อมูลให้ครบถ้วน');
+    if (newPassword.length < 6) {
+      Alert.alert('แจ้งเตือน', 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร');
       return;
     }
     if (newPassword !== confirmPassword) {
-      Alert.alert('แจ้งเตือน', 'รหัสผ่านไม่ตรงกัน');
+      Alert.alert('แจ้งเตือน', 'รหัสผ่านทั้งสองช่องไม่ตรงกัน');
       return;
     }
 
     setLoading(true);
     try {
-      // 💡 Query ค้นหา User จากเบอร์โทรศัพท์
-      const usersRef = collection(db, "users");
-      const q = query(usersRef, where("phone_number", "==", targetPhone.trim()));
-      const querySnapshot = await getDocs(q);
+      // 2. ค้นหา user จาก phone_number ใน Firestore
+      const q = query(
+        collection(db, 'users'),
+        where('phone_number', '==', phoneNumber)
+      );
+      const snapshot = await getDocs(q);
 
-      if (querySnapshot.empty) {
-        Alert.alert('ผิดพลาด', 'ไม่พบข้อมูลผู้ใช้ในระบบ');
+      if (snapshot.empty) {
+        Alert.alert('ผิดพลาด', 'ไม่พบเบอร์โทรศัพท์นี้ในระบบ');
         setLoading(false);
         return;
       }
 
-      // อัปเดตรหัสผ่านใหม่ลงในฟิลด์ "Password" (ตามโครงสร้างฐานข้อมูลของคุณ)
-      const userDoc = querySnapshot.docs[0];
-      const userDocRef = doc(db, "users", userDoc.id);
-
-      await updateDoc(userDocRef, {
-        Password: newPassword 
+      // 3. อัปเดตรหัสผ่านใหม่ลง Firestore
+      const userDocId = snapshot.docs[0].id;
+      await updateDoc(doc(db, 'users', userDocId), {
+        password: newPassword, // ✅ บันทึกรหัสใหม่จริงๆ
       });
 
-      Alert.alert('สำเร็จ', 'เปลี่ยนรหัสผ่านใหม่เรียบร้อยแล้ว', [
-        { text: 'ตกลง', onPress: () => onNext && onNext() }
+      Alert.alert('สำเร็จ', 'เปลี่ยนรหัสผ่านเรียบร้อยแล้ว', [
+        {
+          text: 'ตกลง',
+          onPress: () => {
+            if (onResetSuccess) onResetSuccess(); // กลับไปหน้า Login
+          },
+        },
       ]);
-
     } catch (error) {
-      console.error("Reset Password Error: ", error);
-      Alert.alert('ผิดพลาด', 'ไม่สามารถเปลี่ยนรหัสผ่านได้');
+      console.error('ResetPassword Error:', error);
+      Alert.alert('ผิดพลาด', 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
     } finally {
       setLoading(false);
     }
@@ -76,8 +69,8 @@ const ResetPassword = ({ onNext, onBack, phone, phoneNumber }) => {
 
   return (
     <View style={styles.mainContainer}>
-      <Image 
-        source={require('./assets/bg.png')} 
+      <Image
+        source={require('./assets/bg.png')}
         style={styles.headerImage}
         resizeMode="cover"
       />
@@ -91,35 +84,34 @@ const ResetPassword = ({ onNext, onBack, phone, phoneNumber }) => {
             <TouchableOpacity style={styles.backButton} onPress={onBack}>
               <Text style={styles.backButtonText}>←</Text>
             </TouchableOpacity>
-            
+
             <Text style={styles.headerText}>ตั้งรหัสผ่านใหม่</Text>
 
             <Text style={styles.label}>รหัสผ่านใหม่</Text>
             <TextInput
               style={styles.input}
-              placeholder="XXXXXXXXX"
+              placeholder="อย่างน้อย 6 ตัวอักษร"
               placeholderTextColor="#C0C0C0"
               secureTextEntry={true}
               value={newPassword}
               onChangeText={setNewPassword}
-              color="#000"
             />
 
             <Text style={styles.label}>ยืนยันรหัสผ่านใหม่</Text>
             <TextInput
               style={styles.input}
-              placeholder="XXXXXXXXX"
+              placeholder="กรอกรหัสผ่านอีกครั้ง"
               placeholderTextColor="#C0C0C0"
               secureTextEntry={true}
               value={confirmPassword}
               onChangeText={setConfirmPassword}
-              color="#000"
             />
 
             <View style={{ marginTop: 20 }}>
-              <TouchableOpacity 
-                style={[styles.primaryButton, { opacity: loading ? 0.7 : 1 }]} 
-                onPress={handleResetPassword}
+              {/* ✅ เปลี่ยนจาก onPress={onNext} เป็น onPress={handleReset} */}
+              <TouchableOpacity
+                style={[styles.primaryButton, { opacity: loading ? 0.7 : 1 }]}
+                onPress={handleReset}
                 disabled={loading}
               >
                 {loading ? (
