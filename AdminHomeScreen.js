@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  SafeAreaView, Image, ActivityIndicator, StatusBar
+  Image, ActivityIndicator, StatusBar
 } from 'react-native';
 import MapView, { Marker, Circle, Callout, PROVIDER_GOOGLE } from 'react-native-maps';
 import { db } from './firebaseConfig';
 import { collection, onSnapshot, query, getCountFromServer } from 'firebase/firestore';
+import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // ── รายการบริการ (Hardcode จาก assets) ──
 const SERVICE_LIST = [
@@ -16,7 +17,12 @@ const SERVICE_LIST = [
   { key: 'rescue',   label: 'สายด่วนกู้ภัย',   image: require('./assets/rs.png'),      accent: '#10B981' },
 ];
 
+const FOOTER_TAB_HEIGHT = 56;
+
 const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile, onGoToSorting }) => {
+  const insets = useSafeAreaInsets();
+  const FOOTER_HEIGHT = FOOTER_TAB_HEIGHT + insets.bottom;
+
   const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(true);
@@ -96,11 +102,11 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
   const maxCount = Math.max(...SERVICE_LIST.map(s => serviceCounts[s.label] || 0), 1);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <StatusBar barStyle="dark-content" backgroundColor="#F8F7F4" />
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 110 }}
+        contentContainerStyle={{ paddingBottom: FOOTER_HEIGHT + 16 }}
       >
 
         {/* ── Header ── */}
@@ -236,7 +242,7 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
       </ScrollView>
 
       {/* ── Footer ── */}
-      <View style={styles.footer}>
+      <View style={[styles.footer, { height: FOOTER_HEIGHT, paddingBottom: insets.bottom }]}>
         <FooterTab icon={require('./assets/home (2).png')} active onPress={onGoHome} />
         <FooterTab icon={require('./assets/emergency (1).png')} onPress={onGoSOS} />
         <FooterTab icon={require('./assets/map (1).png')} onPress={onGoSearch} />
@@ -281,7 +287,7 @@ const styles = StyleSheet.create({
   // ── Header ──
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 22, paddingTop: 20, paddingBottom: 18,
+    paddingHorizontal: 22, paddingTop: 12, paddingBottom: 18,
   },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   headerBadge: {
@@ -388,10 +394,9 @@ const styles = StyleSheet.create({
   // ── Footer ──
   footer: {
     position: 'absolute', bottom: 0,
-    flexDirection: 'row', width: '100%', height: 80,
+    flexDirection: 'row', width: '100%',
     backgroundColor: '#FFF',
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#E5E7EB',
-    paddingBottom: 18,
     shadowColor: '#000', shadowOffset: { width: 0, height: -3 },
     shadowOpacity: 0.06, shadowRadius: 10, elevation: 10,
   },
