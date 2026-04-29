@@ -17,7 +17,7 @@ const SERVICE_LIST = [
   { key: 'rescue', label: 'สายด่วนกู้ภัย', image: require('./assets/rs.png'), accent: '#10B981' },
 ];
 
-const FOOTER_TAB_HEIGHT = 56;
+const FOOTER_TAB_HEIGHT = 45;
 
 // ── ฟังก์ชันคำนวณระยะทาง ──
 const getDistanceFromLatLonInKm = (lat1, lon1, lat2, lon2) => {
@@ -510,21 +510,17 @@ const styles = StyleSheet.create({
   serviceCount: { fontSize: 14, fontWeight: '700', marginLeft: 8 },
   barTrack: { height: 4, backgroundColor: '#F3F4F6', borderRadius: 2, overflow: 'hidden' },
   barFill: { height: 4, borderRadius: 2 },
-  footer: {
-    position: 'absolute', bottom: 0,
-    flexDirection: 'row', width: '100%',
-    backgroundColor: '#FFF',
-    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#E5E7EB',
-    shadowColor: '#000', shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.06, shadowRadius: 10, elevation: 10,
-  },
+  footer: { position: 'absolute', bottom: 14, flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', width: '100%', height: 80, backgroundColor: '#FFF', borderTopWidth: 1, borderTopColor: '#F0F0F0', paddingBottom: 15 },
+  footerButton: { padding: 10, flex: 1, alignItems: 'center' },
+  footerIcon: { width: 25, height: 25 },
+ 
   fBtn: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   fActiveDot: {
-    position: 'absolute', top: 8,
-    width: 4, height: 4, borderRadius: 2,
+    position: 'absolute', top: 1,
+    width: 2, height: 2, borderRadius: 2,
     backgroundColor: '#FF5A3C',
   },
-  fIcon: { width: 22, height: 22 },
+  fIcon: { width: 25, height: 25},
 });
 
 export default AdminHomeScreen;
