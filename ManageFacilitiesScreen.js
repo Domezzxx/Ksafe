@@ -2,13 +2,15 @@ import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, FlatList,
   Image, StyleSheet, ScrollView, ActivityIndicator,
-  Alert, Dimensions, SafeAreaView, KeyboardAvoidingView, Platform
+  Alert, Dimensions, KeyboardAvoidingView, Platform
 } from 'react-native';
 import { collection, query, onSnapshot, addDoc, updateDoc, doc, deleteDoc, GeoPoint } from 'firebase/firestore';
 import { db } from './firebaseConfig';
 import * as ImagePicker from 'expo-image-picker';
 import { ChevronLeft, Edit3, Trash2, Plus, ChevronDown, Camera } from 'lucide-react-native';
 import MapView, { Marker } from 'react-native-maps';
+import {SafeAreaView} from 'react-native-safe-area-context';
+
 
 const { width } = Dimensions.get('window');
 const INITIAL_REGION = {
@@ -285,6 +287,9 @@ const styles = StyleSheet.create({
   typeTabActive: { borderColor: '#F48E54', backgroundColor: '#FFF2EB' },
   saveBtn: { backgroundColor: '#F48E54', padding: 18, borderRadius: 15, marginTop: 30, alignItems: 'center' },
   saveBtnText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
-  footer: { height: 70, backgroundColor: '#FFF', flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', borderTopWidth: 1, borderTopColor: '#EEE' },
-  fIcon: { width: 24, height: 24 }
+  footer: { position: 'absolute', bottom: 15, flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', width: '100%', height: 80, backgroundColor: '#FFF', borderTopWidth: 1, borderTopColor: '#F0F0F0', paddingBottom: 15 },
+  footerButton: { padding: 10, flex: 1, alignItems: 'center' },
+  footerIcon: { width: 25, height: 25 },
+ fIcon: { width: 24, height: 24 }
+  
 });
