@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider } from 'react-native-safe-area-context'; // อย่าลืม import ตัวนี้ด้วยครับ
+
 // --- Import ทุกหน้าจอของคุณ ---
 import WelcomeScreen from './WelcomeScreen';
 import WelcomeScreen2 from './WelcomeScreen2';
@@ -22,6 +23,7 @@ import ManageFacilitiesScreen from './ManageFacilitiesScreen';
 import ManageUserScreen from './ManageUserScreen';
 import IncidentSortingScreen from './IncidentSortingScreen';
 
+// เปลี่ยนชื่อจาก App เป็น AppContent
 function AppContent() {
   const [currentScreen, setCurrentScreen] = useState('Welcome1');
   const [selectedPlace, setSelectedPlace] = useState(null);
@@ -30,10 +32,8 @@ function AppContent() {
   const [userPhone, setUserPhone] = useState('');
   const [userRole, setUserRole] = useState('');
 
-  // ✅ เก็บสถานะการกรองสี (Filter) สำหรับ Admin
   const [filterType, setFilterType] = useState('all');
 
-  // ✅ เก็บเบอร์ฉุกเฉินที่ User เลือกไว้
   const [emergencyContact, setEmergencyContact] = useState({
     name: 'สถานีตำรวจ',
     phone: '191',
@@ -48,14 +48,11 @@ function AppContent() {
     manageContact: () => setCurrentScreen('ManageContact'),
     manageFacilities: () => setCurrentScreen('ManageFacilities'),
     manageUser: () => setCurrentScreen('ManageUser'),
-    // ✅ ฟังก์ชันเปลี่ยนหน้า Sorting และจำค่าสีที่กดมา
     incidentSorting: (type) => {
       setFilterType(type || 'all');
       setCurrentScreen('IncidentSorting');
     },
   };
-
-  // --- เช็คการแสดงผลหน้าจอ (Screen Switcher) ---
 
   // 1. Welcome Flow
   if (currentScreen === 'Welcome1') return <WelcomeScreen onNext={() => setCurrentScreen('Welcome2')} />;
@@ -118,7 +115,6 @@ function AppContent() {
   if (currentScreen === 'Detail') return <DetailScreen data={selectedPlace} onBack={() => setCurrentScreen('Search')} onPressMap={() => setCurrentScreen('Map')} />;
   if (currentScreen === 'Map') return <MapScreen onBack={() => setCurrentScreen('Detail')} destinationName={selectedPlace?.ชื่อ || "จุดหมาย"} destinationCoords={selectedPlace?.พิกัด || { latitude: selectedPlace?.latitude, longitude: selectedPlace?.longitude }} />;
 
-  // ✅ รวม SOS Screen: ส่งทั้งเบอร์ที่เลือก (emergencyContact) และเบอร์ผู้ใช้ (userPhone)
   if (currentScreen === 'SOS') return (
     <SosScreen
       emergencyContact={emergencyContact}
@@ -130,7 +126,6 @@ function AppContent() {
     />
   );
 
-  // ✅ รวม Profile Screen: ส่ง onUpdateContact เพื่อให้เปลี่ยนเบอร์ฉุกเฉินได้
   if (currentScreen === 'Profile') return (
     <ProfileScreen
       currentUserPhone={userPhone}
@@ -143,10 +138,10 @@ function AppContent() {
     />
   );
 
-  // Default Screen
   return <HomeScreen currentUserPhone={userPhone} onGoHome={navigateTo.home} onGoSOS={navigateTo.sos} onGoSearch={navigateTo.search} onGoProfile={navigateTo.profile} />;
 }
 
+// ตัวแปร App หลักสำหรับ Export
 export default function App() {
   return (
     <SafeAreaProvider>
