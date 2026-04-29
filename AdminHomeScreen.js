@@ -6,15 +6,15 @@ import {
 import MapView, { Marker, Circle, Callout, PROVIDER_GOOGLE } from 'react-native-maps';
 import { db } from './firebaseConfig';
 import { collection, onSnapshot, query, getCountFromServer } from 'firebase/firestore';
-import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // ── รายการบริการ (Hardcode จาก assets) ──
 const SERVICE_LIST = [
-  { key: 'jrajon',   label: 'กรมทางหลวงชนบท', image: require('./assets/jrajon.png'),  accent: '#3B82F6' },
-  { key: 'police',   label: 'สายด่วนตำรวจ',   image: require('./assets/rp.png'),      accent: '#6366F1' },
+  { key: 'jrajon',   label: 'กรมทางหลวงชนบท', image: require('./assets/jrajon.png'),   accent: '#3B82F6' },
+  { key: 'police',   label: 'สายด่วนตำรวจ',   image: require('./assets/rp.png'),       accent: '#6366F1' },
   { key: 'fire',     label: 'เพลิงไหม้',       image: require('./assets/fire.png'),    accent: '#EF4444' },
   { key: 'electric', label: 'การไฟฟ้า',        image: require('./assets/phifa.png'),   accent: '#F59E0B' },
-  { key: 'rescue',   label: 'สายด่วนกู้ภัย',   image: require('./assets/rs.png'),      accent: '#10B981' },
+  { key: 'rescue',   label: 'สายด่วนกู้ภัย',   image: require('./assets/rs.png'),       accent: '#10B981' },
 ];
 
 const FOOTER_TAB_HEIGHT = 56;
@@ -128,20 +128,22 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
         {/* ── Stat Cards ── */}
         <View style={styles.cardRow}>
 
-          {/* Big card — เหตุฉุกเฉิน */}
-          <View style={[styles.cardBig, { backgroundColor: '#FF5A3C' }]}>
-            {/* Decorative circles */}
+          {/* ✅ เปลี่ยนเป็น TouchableOpacity เพื่อกดไปหน้า Sorting */}
+          <TouchableOpacity 
+            style={[styles.cardBig, { backgroundColor: '#FF5A3C' }]}
+            activeOpacity={0.9}
+            onPress={() => onGoToSorting && onGoToSorting('all')}
+          >
             <View style={[styles.deco, { width: 100, height: 100, top: -30, right: -30, backgroundColor: 'rgba(255,255,255,0.12)' }]} />
             <View style={[styles.deco, { width: 60, height: 60, bottom: 10, left: -15, backgroundColor: 'rgba(255,255,255,0.08)' }]} />
             <Text style={styles.cardIcon}>🚨</Text>
             <Text style={styles.cardNum}>{statsLoading ? '–' : stats.todayIncidents}</Text>
             <Text style={styles.cardLabel}>เหตุฉุกเฉินวันนี้</Text>
             <View style={styles.cardPill}>
-              <Text style={styles.cardPillText}>วันนี้</Text>
+              <Text style={styles.cardPillText}>ดูรายละเอียด →</Text>
             </View>
-          </View>
+          </TouchableOpacity>
 
-          {/* Right column */}
           <View style={styles.cardColRight}>
             <View style={[styles.cardSmall, { backgroundColor: '#1E1B4B' }]}>
               <View style={[styles.deco, { width: 60, height: 60, top: -15, right: -15, backgroundColor: 'rgba(255,255,255,0.08)' }]} />
@@ -156,7 +158,6 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
               <Text style={styles.cardLabel}>สถานที่ในระบบ</Text>
             </View>
           </View>
-
         </View>
 
         {/* ── Map Section ── */}
@@ -192,16 +193,15 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
                     />
                     <Marker
                       coordinate={{ latitude: lat, longitude: lng }}
+                      // ✅ สำคัญ: ใช้ onCalloutPress ที่ตัว Marker เพื่อความเสถียรของปุ่มบน Android
                       onCalloutPress={() => onGoToSorting && onGoToSorting(item.severity)}
                     >
                       <View style={[styles.markerOuter, { borderColor: config.solid }]}>
                         <View style={[styles.markerInner, { backgroundColor: config.solid }]} />
                       </View>
                       <Callout tooltip>
-                        <TouchableOpacity
-                          style={styles.calloutBox}
-                          onPress={() => onGoToSorting && onGoToSorting(item.severity)}
-                        >
+                        {/* ไม่ควรใช้ TouchableOpacity ซ้อนใน Callout บน Android ให้ใช้ View ปกติ */}
+                        <View style={styles.calloutBox}>
                           <View style={[styles.calloutBadge, { backgroundColor: config.solid }]}>
                             <Text style={styles.calloutBadgeText}>{config.label}</Text>
                           </View>
@@ -209,7 +209,7 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
                           <View style={[styles.goBtn, { backgroundColor: config.solid }]}>
                             <Text style={styles.goBtnText}>ดูรายการ →</Text>
                           </View>
-                        </TouchableOpacity>
+                        </View>
                       </Callout>
                     </Marker>
                   </React.Fragment>
@@ -252,7 +252,7 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
   );
 };
 
-// ── Sub Components ──
+// ── Sub Components (คงเดิม) ──
 
 const ServiceRow = ({ name, count, image, accent, maxCount, isLast }) => {
   const pct = maxCount > 0 ? count / maxCount : 0;
@@ -283,8 +283,6 @@ const FooterTab = ({ icon, active, onPress }) => (
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8F7F4' },
-
-  // ── Header ──
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: 22, paddingTop: 12, paddingBottom: 18,
@@ -303,8 +301,6 @@ const styles = StyleSheet.create({
     borderRadius: 20, borderWidth: 1, borderColor: '#FECACA',
   },
   logoutText: { fontSize: 12, color: '#EF4444', fontWeight: '700' },
-
-  // ── Stat Cards ──
   cardRow: { flexDirection: 'row', paddingHorizontal: 18, gap: 12, marginBottom: 28 },
   cardBig: {
     flex: 1.05, borderRadius: 24, padding: 20, overflow: 'hidden',
@@ -327,13 +323,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 3,
   },
   cardPillText: { fontSize: 10, color: '#FFF', fontWeight: '600' },
-
-  // ── Section Header ──
   sectionHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, marginBottom: 12 },
   sectionAccent: { width: 4, height: 18, backgroundColor: '#FF5A3C', borderRadius: 2, marginRight: 8 },
   sectionTitle: { fontSize: 15, fontWeight: '700', color: '#1F2937' },
-
-  // ── Map ──
   mapWrapper: {
     marginHorizontal: 18, height: 300,
     borderRadius: 22, overflow: 'hidden',
@@ -344,8 +336,6 @@ const styles = StyleSheet.create({
   map: { ...StyleSheet.absoluteFillObject },
   loaderBox: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loaderText: { marginTop: 10, color: '#9CA3AF', fontSize: 13 },
-
-  // Markers
   markerOuter: {
     width: 18, height: 18, borderRadius: 9,
     borderWidth: 2.5, justifyContent: 'center', alignItems: 'center',
@@ -356,16 +346,12 @@ const styles = StyleSheet.create({
     width: 160, backgroundColor: '#FFF',
     borderRadius: 16, padding: 14,
     alignItems: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15, shadowRadius: 10,
   },
   calloutBadge: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, marginBottom: 6 },
   calloutBadgeText: { fontSize: 12, fontWeight: '700', color: '#FFF' },
   calloutSub: { fontSize: 11, color: '#6B7280', marginBottom: 10 },
   goBtn: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8 },
   goBtnText: { color: '#FFF', fontSize: 11, fontWeight: '700' },
-
-  // ── Service Rows ──
   serviceListWrapper: {
     marginHorizontal: 18, marginBottom: 10,
     backgroundColor: '#FFF', borderRadius: 22, overflow: 'hidden',
@@ -390,8 +376,6 @@ const styles = StyleSheet.create({
   serviceCount: { fontSize: 14, fontWeight: '700', marginLeft: 8 },
   barTrack: { height: 4, backgroundColor: '#F3F4F6', borderRadius: 2, overflow: 'hidden' },
   barFill: { height: 4, borderRadius: 2 },
-
-  // ── Footer ──
   footer: {
     position: 'absolute', bottom: 0,
     flexDirection: 'row', width: '100%',
