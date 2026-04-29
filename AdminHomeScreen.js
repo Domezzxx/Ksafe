@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  SafeAreaView, Image, ActivityIndicator, StatusBar
+  Image, ActivityIndicator, StatusBar
 } from 'react-native';
 import MapView, { Marker, Circle, Callout, PROVIDER_GOOGLE } from 'react-native-maps';
 import { db } from './firebaseConfig';
 import { collection, onSnapshot, query, getCountFromServer } from 'firebase/firestore';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // ── รายการบริการ (Hardcode จาก assets) ──
 const SERVICE_LIST = [
@@ -16,47 +17,127 @@ const SERVICE_LIST = [
   { key: 'rescue', label: 'สายด่วนกู้ภัย', image: require('./assets/rs.png'), accent: '#10B981' },
 ];
 
+const FOOTER_TAB_HEIGHT = 56;
+
+// ── ฟังก์ชันคำนวณระยะทาง ──
+const getDistanceFromLatLonInKm = (lat1, lon1, lat2, lon2) => {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLon = (lon2 - lon1) * (Math.PI / 180);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
+
+// ── ฟังก์ชันคำนวณ severity แบบเดียวกับ IncidentSortingScreen ──
+const computeSeverity = (rawData) => {
+  const radiusKm = 1.0;
+  return rawData.map((item, _, arr) => {
+    if (!item.hasCoords) return { ...item, severity: 'low', nearbyCount: 0 };
+
+    let nearbyCount = 0;
+    for (let i = 0; i < arr.length; i++) {
+      const other = arr[i];
+      if (!other.hasCoords) continue;
+      if (Math.abs(item.lat - other.lat) > 0.015 || Math.abs(item.lng - other.lng) > 0.015) continue;
+      const dist = getDistanceFromLatLonInKm(item.lat, item.lng, other.lat, other.lng);
+      if (dist <= radiusKm) nearbyCount++;
+    }
+
+    let severity = 'low';
+    if (nearbyCount >= 20) severity = 'high';
+    else if (nearbyCount >= 5) severity = 'medium';
+
+    return { ...item, severity, nearbyCount };
+  });
+};
+
+// ── ✅ แปลง createdAt ให้เป็น Date รองรับทุก format ──
+const parseDate = (createdAt) => {
+  if (!createdAt) return null;
+  // Firestore Timestamp (มี .toDate())
+  if (typeof createdAt.toDate === 'function') return createdAt.toDate();
+  // Unix timestamp (number) — วินาที หรือ มิลลิวินาที
+  if (typeof createdAt === 'number') {
+    return new Date(createdAt > 1e10 ? createdAt : createdAt * 1000);
+  }
+  // ISO string หรือ string อื่น ๆ
+  if (typeof createdAt === 'string') {
+    const d = new Date(createdAt);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  // Firestore Timestamp object ที่ยังไม่ถูก deserialize (มี seconds field)
+  if (createdAt.seconds !== undefined) {
+    return new Date(createdAt.seconds * 1000);
+  }
+  return null;
+};
+
+// ── ✅ คำนวณ startOfToday เวลาท้องถิ่น ──
+const getStartOfToday = () => {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  return now;
+};
+
 const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile, onGoToSorting }) => {
+  const insets = useSafeAreaInsets();
+  const FOOTER_HEIGHT = FOOTER_TAB_HEIGHT + insets.bottom;
+
   const [incidents, setIncidents] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [incidentLoading, setIncidentLoading] = useState(true);   // ✅ แยก loading ออกจาก statsLoading
   const [statsLoading, setStatsLoading] = useState(true);
+  const [todayIncidents, setTodayIncidents] = useState(0);         // ✅ state แยกสำหรับยอดเหตุฉุกเฉินวันนี้
   const [stats, setStats] = useState({
-    todayIncidents: 0,
     totalUsers: 0,
     totalFacilities: 0,
   });
 
+  // ── ✅ Realtime listener: incidents + นับเฉพาะวันนี้ (รีเซตเองทุก 00:00 อัตโนมัติ) ──
   useEffect(() => {
     const q = query(collection(db, 'incident_reports'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      const startOfToday = getStartOfToday(); // คำนวณใหม่ทุกครั้งที่ snapshot มา
 
-      const data = snapshot.docs.map(doc => {
-        const item = doc.data();
-        let sev = item.severity;
-        if (!sev) {
-          sev = item.count >= 10 ? 'high' : item.count >= 5 ? 'medium' : 'low';
+      const rawData = snapshot.docs.map(doc => {
+        const data = doc.data();
+        let lat = data.latitude !== undefined ? parseFloat(data.latitude) : NaN;
+        let lng = data.longitude !== undefined ? parseFloat(data.longitude) : NaN;
+        if (data.location && typeof data.location.latitude === 'number') {
+          lat = data.location.latitude;
+          lng = data.location.longitude;
         }
-        return { id: doc.id, ...item, severity: sev };
+        return {
+          id: doc.id,
+          ...data,
+          lat,
+          lng,
+          hasCoords: !isNaN(lat) && !isNaN(lng),
+        };
       });
 
-      const todayCount = data.filter(item => {
-        if (!item.createdAt) return false;
-        const d = item.createdAt.toDate ? item.createdAt.toDate() : new Date(item.createdAt);
-        return d >= today;
+      const processed = computeSeverity(rawData);
+
+      // ✅ นับเฉพาะ incident ที่ createdAt >= 00:00:00 วันนี้
+      const todayCount = processed.filter(item => {
+        const d = parseDate(item.timestamp);
+        return d !== null && d >= startOfToday;
       }).length;
 
-      setIncidents(data);
-      setStats(prev => ({ ...prev, todayIncidents: todayCount }));
-      setLoading(false);
+      setIncidents(processed);
+      setTodayIncidents(todayCount);   // ✅ update ทันทีไม่ต้องรอ statsLoading
+      setIncidentLoading(false);
     }, (error) => {
-      console.error("Firebase Error:", error);
-      setLoading(false);
+      console.error('Firebase incident_reports error:', error);
+      setIncidentLoading(false);
     });
     return () => unsubscribe();
   }, []);
 
+  // ── ✅ ดึงจำนวน users และ facilities ครั้งเดียว ──
   useEffect(() => {
     const fetchCounts = async () => {
       try {
@@ -64,13 +145,12 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
           getCountFromServer(collection(db, 'users')),
           getCountFromServer(collection(db, 'facilities')),
         ]);
-        setStats(prev => ({
-          ...prev,
+        setStats({
           totalUsers: usersSnap.data().count,
           totalFacilities: facilitiesSnap.data().count,
-        }));
+        });
       } catch (e) {
-        console.error("Count error:", e);
+        console.error('Count error:', e);
       } finally {
         setStatsLoading(false);
       }
@@ -96,11 +176,11 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
   const maxCount = Math.max(...SERVICE_LIST.map(s => serviceCounts[s.label] || 0), 1);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <StatusBar barStyle="dark-content" backgroundColor="#F8F7F4" />
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 110 }}
+        contentContainerStyle={{ paddingBottom: FOOTER_HEIGHT + 16 }}
       >
 
         {/* ── Header ── */}
@@ -121,21 +201,18 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
 
         {/* ── Stat Cards ── */}
         <View style={styles.cardRow}>
-
-          {/* Big card — เหตุฉุกเฉิน */}
           <View style={[styles.cardBig, { backgroundColor: '#FF5A3C' }]}>
-            {/* Decorative circles */}
             <View style={[styles.deco, { width: 100, height: 100, top: -30, right: -30, backgroundColor: 'rgba(255,255,255,0.12)' }]} />
             <View style={[styles.deco, { width: 60, height: 60, bottom: 10, left: -15, backgroundColor: 'rgba(255,255,255,0.08)' }]} />
             <Text style={styles.cardIcon}>🚨</Text>
-            <Text style={styles.cardNum}>{statsLoading ? '–' : stats.todayIncidents}</Text>
+            {incidentLoading ? (
+              <ActivityIndicator color="#FFF" style={{ marginVertical: 6 }} />
+            ) : (
+              <Text style={styles.cardNum}>{todayIncidents}</Text>
+            )}
             <Text style={styles.cardLabel}>เหตุฉุกเฉินวันนี้</Text>
-            <View style={styles.cardPill}>
-              <Text style={styles.cardPillText}>วันนี้</Text>
-            </View>
           </View>
 
-          {/* Right column */}
           <View style={styles.cardColRight}>
             <View style={[styles.cardSmall, { backgroundColor: '#1E1B4B' }]}>
               <View style={[styles.deco, { width: 60, height: 60, top: -15, right: -15, backgroundColor: 'rgba(255,255,255,0.08)' }]} />
@@ -150,7 +227,6 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
               <Text style={styles.cardLabel}>สถานที่ในระบบ</Text>
             </View>
           </View>
-
         </View>
 
         {/* ── Map Section ── */}
@@ -160,56 +236,90 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
         </View>
 
         <View style={styles.mapWrapper}>
-          {loading ? (
+          {incidentLoading ? (
             <View style={styles.loaderBox}>
               <ActivityIndicator size="large" color="#FF5A3C" />
               <Text style={styles.loaderText}>กำลังโหลดพิกัด...</Text>
             </View>
           ) : (
-            <MapView
-              provider={PROVIDER_GOOGLE}
-              style={styles.map}
-              initialRegion={{ latitude: 14.9071, longitude: 102.0040, latitudeDelta: 0.05, longitudeDelta: 0.05 }}
-            >
-              {incidents.map((item) => {
-                const config = getStyle(item.severity);
-                const lat = parseFloat(item.latitude);
-                const lng = parseFloat(item.longitude);
-                if (isNaN(lat) || isNaN(lng)) return null;
-                return (
-                  <React.Fragment key={item.id}>
-                    <Circle
-                      center={{ latitude: lat, longitude: lng }}
-                      radius={400}
-                      fillColor={config.color}
-                      strokeColor="transparent"
-                    />
-                    <Marker
-                      coordinate={{ latitude: lat, longitude: lng }}
-                      onCalloutPress={() => onGoToSorting && onGoToSorting(item.severity)}
+            <>
+              <MapView
+                provider={PROVIDER_GOOGLE}
+                style={styles.map}
+                initialRegion={{ latitude: 14.9071, longitude: 102.0040, latitudeDelta: 0.05, longitudeDelta: 0.05 }}
+              >
+                {incidents.map((item) => {
+                  if (!item.hasCoords) return null;
+                  const config = getStyle(item.severity);
+                  return (
+                    <React.Fragment key={item.id}>
+                      <Circle
+                        center={{ latitude: item.lat, longitude: item.lng }}
+                        radius={400}
+                        fillColor={config.color}
+                        strokeColor="transparent"
+                      />
+                      <Marker
+                        coordinate={{ latitude: item.lat, longitude: item.lng }}
+                        onCalloutPress={() => onGoToSorting && onGoToSorting(item.severity)}
+                      >
+                        <View style={[styles.markerOuter, { borderColor: config.solid }]}>
+                          <View style={[styles.markerInner, { backgroundColor: config.solid }]} />
+                        </View>
+                        <Callout tooltip onPress={() => onGoToSorting && onGoToSorting(item.severity)}>
+                          <View style={styles.calloutBox}>
+                            <View style={[styles.calloutBadge, { backgroundColor: config.solid }]}>
+                              <Text style={styles.calloutBadgeText}>{config.label}</Text>
+                            </View>
+                            <Text style={styles.calloutSub} numberOfLines={1}>
+                              {item.service_name || 'แจ้งเหตุ SOS'}
+                            </Text>
+                            <Text style={styles.calloutNearby}>
+                              พบ {item.nearbyCount} ครั้งในพื้นที่
+                            </Text>
+                            <TouchableOpacity
+                              style={[styles.goBtn, { backgroundColor: config.solid }]}
+                              onPress={() => onGoToSorting && onGoToSorting(item.severity)}
+                            >
+                              <Text style={styles.goBtnText}>ดูรายการ →</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </Callout>
+                      </Marker>
+                    </React.Fragment>
+                  );
+                })}
+              </MapView>
+
+              {/* Legend + ปุ่มดูทั้งหมด */}
+              <View style={styles.mapOverlay}>
+                <View style={styles.legendRow}>
+                  {[
+                    { sev: 'high', label: 'เสี่ยงสูง', color: '#EF4444' },
+                    { sev: 'medium', label: 'ปานกลาง', color: '#F59E0B' },
+                    { sev: 'low', label: 'เฝ้าระวัง', color: '#FACC15' },
+                  ].map(({ sev, label, color }) => (
+                    <TouchableOpacity
+                      key={sev}
+                      style={styles.legendItem}
+                      onPress={() => onGoToSorting && onGoToSorting(sev)}
+                      activeOpacity={0.75}
                     >
-                      <View style={[styles.markerOuter, { borderColor: config.solid }]}>
-                        <View style={[styles.markerInner, { backgroundColor: config.solid }]} />
-                      </View>
-                      <Callout tooltip>
-                        <TouchableOpacity
-                          style={styles.calloutBox}
-                          onPress={() => onGoToSorting && onGoToSorting(item.severity)}
-                        >
-                          <View style={[styles.calloutBadge, { backgroundColor: config.solid }]}>
-                            <Text style={styles.calloutBadgeText}>{config.label}</Text>
-                          </View>
-                          <Text style={styles.calloutSub}>{item.service_name || 'แจ้งเหตุ SOS'}</Text>
-                          <View style={[styles.goBtn, { backgroundColor: config.solid }]}>
-                            <Text style={styles.goBtnText}>ดูรายการ →</Text>
-                          </View>
-                        </TouchableOpacity>
-                      </Callout>
-                    </Marker>
-                  </React.Fragment>
-                );
-              })}
-            </MapView>
+                      <View style={[styles.legendDot, { backgroundColor: color }]} />
+                      <Text style={styles.legendText}>{label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <TouchableOpacity
+                  style={styles.viewAllBtn}
+                  onPress={() => onGoToSorting && onGoToSorting('all')}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.viewAllText}>ดูทั้งหมด →</Text>
+                </TouchableOpacity>
+              </View>
+            </>
           )}
         </View>
 
@@ -236,7 +346,7 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
       </ScrollView>
 
       {/* ── Footer ── */}
-      <View style={styles.footer}>
+      <View style={[styles.footer, { height: FOOTER_HEIGHT, paddingBottom: insets.bottom }]}>
         <FooterTab icon={require('./assets/home (2).png')} active onPress={onGoHome} />
         <FooterTab icon={require('./assets/emergency (1).png')} onPress={onGoSOS} />
         <FooterTab icon={require('./assets/map (1).png')} onPress={onGoSearch} />
@@ -277,11 +387,9 @@ const FooterTab = ({ icon, active, onPress }) => (
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8F7F4' },
-
-  // ── Header ──
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 22, paddingTop: 20, paddingBottom: 18,
+    paddingHorizontal: 22, paddingTop: 12, paddingBottom: 18,
   },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   headerBadge: {
@@ -297,8 +405,6 @@ const styles = StyleSheet.create({
     borderRadius: 20, borderWidth: 1, borderColor: '#FECACA',
   },
   logoutText: { fontSize: 12, color: '#EF4444', fontWeight: '700' },
-
-  // ── Stat Cards ──
   cardRow: { flexDirection: 'row', paddingHorizontal: 18, gap: 12, marginBottom: 28 },
   cardBig: {
     flex: 1.05, borderRadius: 24, padding: 20, overflow: 'hidden',
@@ -321,13 +427,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 3,
   },
   cardPillText: { fontSize: 10, color: '#FFF', fontWeight: '600' },
-
-  // ── Section Header ──
   sectionHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, marginBottom: 12 },
   sectionAccent: { width: 4, height: 18, backgroundColor: '#FF5A3C', borderRadius: 2, marginRight: 8 },
   sectionTitle: { fontSize: 15, fontWeight: '700', color: '#1F2937' },
-
-  // ── Map ──
   mapWrapper: {
     marginHorizontal: 18, height: 300,
     borderRadius: 22, overflow: 'hidden',
@@ -338,8 +440,6 @@ const styles = StyleSheet.create({
   map: { ...StyleSheet.absoluteFillObject },
   loaderBox: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loaderText: { marginTop: 10, color: '#9CA3AF', fontSize: 13 },
-
-  // Markers
   markerOuter: {
     width: 18, height: 18, borderRadius: 9,
     borderWidth: 2.5, justifyContent: 'center', alignItems: 'center',
@@ -351,15 +451,41 @@ const styles = StyleSheet.create({
     borderRadius: 16, padding: 14,
     alignItems: 'center',
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15, shadowRadius: 10,
+    shadowOpacity: 0.15, shadowRadius: 8, elevation: 6,
   },
   calloutBadge: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, marginBottom: 6 },
   calloutBadgeText: { fontSize: 12, fontWeight: '700', color: '#FFF' },
-  calloutSub: { fontSize: 11, color: '#6B7280', marginBottom: 10 },
+  calloutSub: { fontSize: 11, color: '#6B7280', marginBottom: 4, textAlign: 'center' },
+  calloutNearby: { fontSize: 10, color: '#9CA3AF', marginBottom: 10 },
   goBtn: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8 },
   goBtnText: { color: '#FFF', fontSize: 11, fontWeight: '700' },
-
-  // ── Service Rows ──
+  mapOverlay: {
+    position: 'absolute',
+    bottom: 12, left: 12, right: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  legendRow: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    borderRadius: 20,
+    paddingHorizontal: 10, paddingVertical: 6,
+    gap: 10,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1, shadowRadius: 4, elevation: 3,
+  },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  legendDot: { width: 10, height: 10, borderRadius: 5 },
+  legendText: { fontSize: 10, fontWeight: '600', color: '#374151' },
+  viewAllBtn: {
+    backgroundColor: '#FF5A3C',
+    borderRadius: 20,
+    paddingHorizontal: 14, paddingVertical: 7,
+    shadowColor: '#FF5A3C', shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.35, shadowRadius: 6, elevation: 4,
+  },
+  viewAllText: { color: '#FFF', fontSize: 11, fontWeight: '700' },
   serviceListWrapper: {
     marginHorizontal: 18, marginBottom: 10,
     backgroundColor: '#FFF', borderRadius: 22, overflow: 'hidden',
@@ -384,14 +510,11 @@ const styles = StyleSheet.create({
   serviceCount: { fontSize: 14, fontWeight: '700', marginLeft: 8 },
   barTrack: { height: 4, backgroundColor: '#F3F4F6', borderRadius: 2, overflow: 'hidden' },
   barFill: { height: 4, borderRadius: 2 },
-
-  // ── Footer ──
   footer: {
     position: 'absolute', bottom: 0,
-    flexDirection: 'row', width: '100%', height: 80,
+    flexDirection: 'row', width: '100%',
     backgroundColor: '#FFF',
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#E5E7EB',
-    paddingBottom: 18,
     shadowColor: '#000', shadowOffset: { width: 0, height: -3 },
     shadowOpacity: 0.06, shadowRadius: 10, elevation: 10,
   },
