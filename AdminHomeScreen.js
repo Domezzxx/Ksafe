@@ -19,7 +19,7 @@ const SERVICE_LIST = [
 
 const FOOTER_TAB_HEIGHT = 56;
 
-// ✅ ฟังก์ชันคำนวณระยะทาง (เหมือนกับ IncidentSortingScreen)
+// ── ฟังก์ชันคำนวณระยะทาง ──
 const getDistanceFromLatLonInKm = (lat1, lon1, lat2, lon2) => {
   const R = 6371;
   const dLat = (lat2 - lat1) * (Math.PI / 180);
@@ -32,7 +32,7 @@ const getDistanceFromLatLonInKm = (lat1, lon1, lat2, lon2) => {
   return R * c;
 };
 
-// ✅ ฟังก์ชันคำนวณ severity แบบเดียวกับ IncidentSortingScreen (proximity-based)
+// ── ฟังก์ชันคำนวณ severity แบบเดียวกับ IncidentSortingScreen ──
 const computeSeverity = (rawData) => {
   const radiusKm = 1.0;
   return rawData.map((item, _, arr) => {
@@ -55,26 +55,53 @@ const computeSeverity = (rawData) => {
   });
 };
 
+// ── ✅ แปลง createdAt ให้เป็น Date รองรับทุก format ──
+const parseDate = (createdAt) => {
+  if (!createdAt) return null;
+  // Firestore Timestamp (มี .toDate())
+  if (typeof createdAt.toDate === 'function') return createdAt.toDate();
+  // Unix timestamp (number) — วินาที หรือ มิลลิวินาที
+  if (typeof createdAt === 'number') {
+    return new Date(createdAt > 1e10 ? createdAt : createdAt * 1000);
+  }
+  // ISO string หรือ string อื่น ๆ
+  if (typeof createdAt === 'string') {
+    const d = new Date(createdAt);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  // Firestore Timestamp object ที่ยังไม่ถูก deserialize (มี seconds field)
+  if (createdAt.seconds !== undefined) {
+    return new Date(createdAt.seconds * 1000);
+  }
+  return null;
+};
+
+// ── ✅ คำนวณ startOfToday เวลาท้องถิ่น ──
+const getStartOfToday = () => {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  return now;
+};
+
 const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile, onGoToSorting }) => {
   const insets = useSafeAreaInsets();
   const FOOTER_HEIGHT = FOOTER_TAB_HEIGHT + insets.bottom;
 
   const [incidents, setIncidents] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [incidentLoading, setIncidentLoading] = useState(true);   // ✅ แยก loading ออกจาก statsLoading
   const [statsLoading, setStatsLoading] = useState(true);
+  const [todayIncidents, setTodayIncidents] = useState(0);         // ✅ state แยกสำหรับยอดเหตุฉุกเฉินวันนี้
   const [stats, setStats] = useState({
-    todayIncidents: 0,
     totalUsers: 0,
     totalFacilities: 0,
   });
 
+  // ── ✅ Realtime listener: incidents + นับเฉพาะวันนี้ (รีเซตเองทุก 00:00 อัตโนมัติ) ──
   useEffect(() => {
     const q = query(collection(db, 'incident_reports'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      const startOfToday = getStartOfToday(); // คำนวณใหม่ทุกครั้งที่ snapshot มา
 
-      // ✅ ดึงพิกัดแบบ robust (รองรับทั้ง latitude/longitude และ GeoPoint)
       const rawData = snapshot.docs.map(doc => {
         const data = doc.data();
         let lat = data.latitude !== undefined ? parseFloat(data.latitude) : NaN;
@@ -92,25 +119,25 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
         };
       });
 
-      // ✅ คำนวณ severity แบบเดียวกับ IncidentSortingScreen
       const processed = computeSeverity(rawData);
 
+      // ✅ นับเฉพาะ incident ที่ createdAt >= 00:00:00 วันนี้
       const todayCount = processed.filter(item => {
-        if (!item.createdAt) return false;
-        const d = item.createdAt.toDate ? item.createdAt.toDate() : new Date(item.createdAt);
-        return d >= today;
+        const d = parseDate(item.timestamp);
+        return d !== null && d >= startOfToday;
       }).length;
 
       setIncidents(processed);
-      setStats(prev => ({ ...prev, todayIncidents: todayCount }));
-      setLoading(false);
+      setTodayIncidents(todayCount);   // ✅ update ทันทีไม่ต้องรอ statsLoading
+      setIncidentLoading(false);
     }, (error) => {
-      console.error("Firebase Error:", error);
-      setLoading(false);
+      console.error('Firebase incident_reports error:', error);
+      setIncidentLoading(false);
     });
     return () => unsubscribe();
   }, []);
 
+  // ── ✅ ดึงจำนวน users และ facilities ครั้งเดียว ──
   useEffect(() => {
     const fetchCounts = async () => {
       try {
@@ -118,13 +145,12 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
           getCountFromServer(collection(db, 'users')),
           getCountFromServer(collection(db, 'facilities')),
         ]);
-        setStats(prev => ({
-          ...prev,
+        setStats({
           totalUsers: usersSnap.data().count,
           totalFacilities: facilitiesSnap.data().count,
-        }));
+        });
       } catch (e) {
-        console.error("Count error:", e);
+        console.error('Count error:', e);
       } finally {
         setStatsLoading(false);
       }
@@ -175,6 +201,7 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
 
         {/* ── Stat Cards ── */}
         <View style={styles.cardRow}>
+          {/* ✅ Card เหตุฉุกเฉิน — ใช้ incidentLoading แยกต่างหาก แสดงตัวเลขทันที */}
           <TouchableOpacity
             style={[styles.cardBig, { backgroundColor: '#FF5A3C' }]}
             activeOpacity={0.9}
@@ -183,7 +210,11 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
             <View style={[styles.deco, { width: 100, height: 100, top: -30, right: -30, backgroundColor: 'rgba(255,255,255,0.12)' }]} />
             <View style={[styles.deco, { width: 60, height: 60, bottom: 10, left: -15, backgroundColor: 'rgba(255,255,255,0.08)' }]} />
             <Text style={styles.cardIcon}>🚨</Text>
-            <Text style={styles.cardNum}>{statsLoading ? '–' : stats.todayIncidents}</Text>
+            {incidentLoading ? (
+              <ActivityIndicator color="#FFF" style={{ marginVertical: 6 }} />
+            ) : (
+              <Text style={styles.cardNum}>{todayIncidents}</Text>
+            )}
             <Text style={styles.cardLabel}>เหตุฉุกเฉินวันนี้</Text>
             <View style={styles.cardPill}>
               <Text style={styles.cardPillText}>ดูรายละเอียด →</Text>
@@ -213,7 +244,7 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
         </View>
 
         <View style={styles.mapWrapper}>
-          {loading ? (
+          {incidentLoading ? (
             <View style={styles.loaderBox}>
               <ActivityIndicator size="large" color="#FF5A3C" />
               <Text style={styles.loaderText}>กำลังโหลดพิกัด...</Text>
@@ -236,7 +267,6 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
                         fillColor={config.color}
                         strokeColor="transparent"
                       />
-                      {/* ✅ onCalloutPress บน Marker — ทำงานได้ทั้ง iOS และ Android */}
                       <Marker
                         coordinate={{ latitude: item.lat, longitude: item.lng }}
                         onCalloutPress={() => onGoToSorting && onGoToSorting(item.severity)}
@@ -266,7 +296,7 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
                 })}
               </MapView>
 
-              {/* ✅ Legend + ปุ่มดูทั้งหมด ซ้อนบนแผนที่ */}
+              {/* Legend + ปุ่มดูทั้งหมด */}
               <View style={styles.mapOverlay}>
                 <View style={styles.legendRow}>
                   {[
@@ -434,13 +464,9 @@ const styles = StyleSheet.create({
   calloutNearby: { fontSize: 10, color: '#9CA3AF', marginBottom: 10 },
   goBtn: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8 },
   goBtnText: { color: '#FFF', fontSize: 11, fontWeight: '700' },
-
-  // ✅ Overlay: Legend + View All Button
   mapOverlay: {
     position: 'absolute',
-    bottom: 12,
-    left: 12,
-    right: 12,
+    bottom: 12, left: 12, right: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -449,39 +475,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: 'rgba(255,255,255,0.92)',
     borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 10, paddingVertical: 6,
     gap: 10,
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1, shadowRadius: 4, elevation: 3,
   },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  legendDot: {
-    width: 10, height: 10, borderRadius: 5,
-  },
-  legendText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#374151',
-  },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  legendDot: { width: 10, height: 10, borderRadius: 5 },
+  legendText: { fontSize: 10, fontWeight: '600', color: '#374151' },
   viewAllBtn: {
     backgroundColor: '#FF5A3C',
     borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
+    paddingHorizontal: 14, paddingVertical: 7,
     shadowColor: '#FF5A3C', shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.35, shadowRadius: 6, elevation: 4,
   },
-  viewAllText: {
-    color: '#FFF',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-
+  viewAllText: { color: '#FFF', fontSize: 11, fontWeight: '700' },
   serviceListWrapper: {
     marginHorizontal: 18, marginBottom: 10,
     backgroundColor: '#FFF', borderRadius: 22, overflow: 'hidden',
