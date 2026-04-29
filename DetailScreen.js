@@ -6,51 +6,28 @@ import {
 
 const { width } = Dimensions.get('window');
 
-// 💡 1. Image Map สำหรับรูปที่เก็บไว้ในโปรเจกต์ (Assets)
-const locationImages = {
-  "โรงพยาบาลมหาวิทยาลัยเทคโนโลยีสุรนารี": require('./assets/sut.jpg'),
-  "PCU-SUT (ศูนย์แพทย์ชุมชน)": require('./assets/pcu.png'),
-  "PCU-SUT (ศูนย์บริการสุขภาพ มทส.)": require('./assets/pcu.png'),
-  "โรงพยาบาลราชสีมา ฮอสพิทอล": require('./assets/ratchasimahospital.png'),
-  "โรงพยาบาลกรุงเทพนครราชสีมา": require('./assets/kungthep.png'),
-  "โรงพยาบาลริมลิฟวิ่ง": require('./assets/rim.png'),
-  "โรงพยาบาลค่ายสุรนารี": require('./assets/suranareecamp.jpg'),
-  "สถานีตำรวจภูธรโพธิ์กลาง": require('./assets/poograng.png'),
-  "สถานีตำรวจภูธรเมืองนครราชสีมา": require('./assets/police.png'),
-  "ศูนย์กู้ภัยฮุก 31": require('./assets/hook31.png'),
-  "ชมรมจิตอาสาแสดทอง": require('./assets/sadthong.png'),
-  "การไฟฟ้าส่วนภูมิภาคเขต 3": require('./assets/pea_korat.png'),
-  "สำนักงานกรมทางหลวงที่ 10": require('./assets/highway10.png'),
-  "สถานีดับเพลิงสุรนารายณ์": require('./assets/fire_suranarai.png'),
-  "ดับเพลิงจอมสุรางค์": require('./assets/fire_chomsurang.png'),
-  "ศูนย์ป้องกันและบรรเทาสาธารณภัย เขต 5": require('./assets/disaster_prevent5.png'),
-};
-
-const defaultImage = require('./assets/sut.jpg'); 
+// 💡 กำหนด URL รูปภาพสำรอง (Placeholder) กรณีที่สถานที่นั้นไม่มีรูป
+const DEFAULT_PLACEHOLDER = 'https://via.placeholder.com/800x450.png?text=No+Image+Available';
 
 export default function DetailScreen({ data, onBack, onPressMap }){
   
-  // 💡 การตัดสินใจเลือกรูปภาพ (ปรับปรุงใหม่)
+  // 💡 การตัดสินใจเลือกรูปภาพ (เน้นดึงจาก Database เป็นหลัก)
   const getImageUrl = () => {
-    // 1. ตรวจสอบฟิลด์ "รูปภาพ" (จากหน้าที่เราทำ Base64/Firestore)
-    if (data?.รูปภาพ) {
+    // 1. ตรวจสอบฟิลด์ "รูปภาพ" (จาก Base64 หรือ URL ใน Firestore)
+    if (data?.รูปภาพ && typeof data.รูปภาพ === 'string') {
       return { uri: data.รูปภาพ };
     }
-    // 2. ถ้ามี imageUrl (จาก Google API หรือแหล่งอื่น)
-    if (data?.imageUrl) {
+    // 2. ถ้ามี imageUrl (เผื่อใช้ชื่อฟิลด์ภาษาอังกฤษ)
+    if (data?.imageUrl && typeof data.imageUrl === 'string') {
       return { uri: data.imageUrl };
     }
-    // 3. ถ้าไม่มี ให้ไปเช็คในลิสต์ชื่อที่จับคู่ไว้ (Assets)
-    if (locationImages[data?.ชื่อ]) {
-      return locationImages[data?.ชื่อ];
-    }
-    // 4. ถ้าไม่เข้าพวกเลย ให้ใช้รูป Default
-    return defaultImage;
+    // 3. ถ้าไม่มีข้อมูลรูปเลย ให้ใช้รูป Placeholder จากเว็บ
+    return { uri: DEFAULT_PLACEHOLDER };
   };
 
   const imageUrl = getImageUrl();
 
-  // ตรวจสอบเบอร์โทรศัพท์ (รองรับทั้งสองชื่อฟิลด์)
+  // ตรวจสอบเบอร์โทรศัพท์
   const phoneNumber = data?.เบอร์โทร || data?.เบอร์โทรติดต่อ || "";
 
   const handleCall = (number) => {
@@ -125,7 +102,7 @@ export default function DetailScreen({ data, onBack, onPressMap }){
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
-  imageWrapper: { width: width, height: 250 },
+  imageWrapper: { width: width, height: 250, backgroundColor: '#f0f0f0' },
   headerImage: { width: '100%', height: '100%' },
   backButton: { 
     position: 'absolute', top: 50, left: 15, zIndex: 10, 
