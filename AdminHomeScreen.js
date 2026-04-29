@@ -10,11 +10,11 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 // ── รายการบริการ (Hardcode จาก assets) ──
 const SERVICE_LIST = [
-  { key: 'jrajon',   label: 'กรมทางหลวงชนบท', image: require('./assets/jrajon.png'),   accent: '#3B82F6' },
-  { key: 'police',   label: 'สายด่วนตำรวจ',   image: require('./assets/rp.png'),       accent: '#6366F1' },
-  { key: 'fire',     label: 'เพลิงไหม้',       image: require('./assets/fire.png'),    accent: '#EF4444' },
-  { key: 'electric', label: 'การไฟฟ้า',        image: require('./assets/phifa.png'),   accent: '#F59E0B' },
-  { key: 'rescue',   label: 'สายด่วนกู้ภัย',   image: require('./assets/rs.png'),       accent: '#10B981' },
+  { key: 'jrajon', label: 'กรมทางหลวงชนบท', image: require('./assets/jrajon.png'), accent: '#3B82F6' },
+  { key: 'police', label: 'สายด่วนตำรวจ', image: require('./assets/rp.png'), accent: '#6366F1' },
+  { key: 'fire', label: 'เพลิงไหม้', image: require('./assets/fire.png'), accent: '#EF4444' },
+  { key: 'electric', label: 'การไฟฟ้า', image: require('./assets/phifa.png'), accent: '#F59E0B' },
+  { key: 'rescue', label: 'สายด่วนกู้ภัย', image: require('./assets/rs.png'), accent: '#10B981' },
 ];
 
 const FOOTER_TAB_HEIGHT = 56;
@@ -160,9 +160,9 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
 
   const getStyle = (sev) => {
     switch (sev) {
-      case 'high':   return { color: 'rgba(239,68,68,0.35)',   solid: '#EF4444', label: 'เสี่ยงสูง' };
-      case 'medium': return { color: 'rgba(245,158,11,0.35)',  solid: '#F59E0B', label: 'ปานกลาง' };
-      default:       return { color: 'rgba(250,204,21,0.35)',  solid: '#FACC15', label: 'เฝ้าระวัง' };
+      case 'high': return { color: 'rgba(239,68,68,0.35)', solid: '#EF4444', label: 'เสี่ยงสูง' };
+      case 'medium': return { color: 'rgba(245,158,11,0.35)', solid: '#F59E0B', label: 'ปานกลาง' };
+      default: return { color: 'rgba(250,204,21,0.35)', solid: '#FACC15', label: 'เฝ้าระวัง' };
     }
   };
 
@@ -201,12 +201,7 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
 
         {/* ── Stat Cards ── */}
         <View style={styles.cardRow}>
-          {/* ✅ Card เหตุฉุกเฉิน — ใช้ incidentLoading แยกต่างหาก แสดงตัวเลขทันที */}
-          <TouchableOpacity
-            style={[styles.cardBig, { backgroundColor: '#FF5A3C' }]}
-            activeOpacity={0.9}
-            onPress={() => onGoToSorting && onGoToSorting('all')}
-          >
+          <View style={[styles.cardBig, { backgroundColor: '#FF5A3C' }]}>
             <View style={[styles.deco, { width: 100, height: 100, top: -30, right: -30, backgroundColor: 'rgba(255,255,255,0.12)' }]} />
             <View style={[styles.deco, { width: 60, height: 60, bottom: 10, left: -15, backgroundColor: 'rgba(255,255,255,0.08)' }]} />
             <Text style={styles.cardIcon}>🚨</Text>
@@ -216,10 +211,7 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
               <Text style={styles.cardNum}>{todayIncidents}</Text>
             )}
             <Text style={styles.cardLabel}>เหตุฉุกเฉินวันนี้</Text>
-            <View style={styles.cardPill}>
-              <Text style={styles.cardPillText}>ดูรายละเอียด →</Text>
-            </View>
-          </TouchableOpacity>
+          </View>
 
           <View style={styles.cardColRight}>
             <View style={[styles.cardSmall, { backgroundColor: '#1E1B4B' }]}>
@@ -274,7 +266,7 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
                         <View style={[styles.markerOuter, { borderColor: config.solid }]}>
                           <View style={[styles.markerInner, { backgroundColor: config.solid }]} />
                         </View>
-                        <Callout tooltip>
+                        <Callout tooltip onPress={() => onGoToSorting && onGoToSorting(item.severity)}>
                           <View style={styles.calloutBox}>
                             <View style={[styles.calloutBadge, { backgroundColor: config.solid }]}>
                               <Text style={styles.calloutBadgeText}>{config.label}</Text>
@@ -285,9 +277,12 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
                             <Text style={styles.calloutNearby}>
                               พบ {item.nearbyCount} ครั้งในพื้นที่
                             </Text>
-                            <View style={[styles.goBtn, { backgroundColor: config.solid }]}>
+                            <TouchableOpacity
+                              style={[styles.goBtn, { backgroundColor: config.solid }]}
+                              onPress={() => onGoToSorting && onGoToSorting(item.severity)}
+                            >
                               <Text style={styles.goBtnText}>ดูรายการ →</Text>
-                            </View>
+                            </TouchableOpacity>
                           </View>
                         </Callout>
                       </Marker>
@@ -300,9 +295,9 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
               <View style={styles.mapOverlay}>
                 <View style={styles.legendRow}>
                   {[
-                    { sev: 'high',   label: 'เสี่ยงสูง',  color: '#EF4444' },
-                    { sev: 'medium', label: 'ปานกลาง',    color: '#F59E0B' },
-                    { sev: 'low',    label: 'เฝ้าระวัง',  color: '#FACC15' },
+                    { sev: 'high', label: 'เสี่ยงสูง', color: '#EF4444' },
+                    { sev: 'medium', label: 'ปานกลาง', color: '#F59E0B' },
+                    { sev: 'low', label: 'เฝ้าระวัง', color: '#FACC15' },
                   ].map(({ sev, label, color }) => (
                     <TouchableOpacity
                       key={sev}
