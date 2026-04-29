@@ -11,11 +11,12 @@ import {
   ActivityIndicator,
   Alert,
   Dimensions,
-  SafeAreaView
 } from 'react-native';
 import { collection, query, onSnapshot, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db } from './firebaseConfig';
 import { Edit2, Search, Calendar } from 'lucide-react-native';
+import {SafeAreaView} from 'react-native-safe-area-context';
+
 
 const { width } = Dimensions.get('window');
 
@@ -319,10 +320,10 @@ const styles = StyleSheet.create({
   saveBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 18 },
   deleteBtn: { backgroundColor: '#EF4444', paddingVertical: 12, borderRadius: 12, flex: 1, alignItems: 'center' },
   deleteBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 18 },
-  footer: { position: 'absolute', bottom: 0, flexDirection: 'row', width: '100%', height: 70, backgroundColor: '#FFF', borderTopWidth: 1, borderTopColor: '#F0F0F0', paddingBottom: 10 },
-  footerButton: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  footerIcon: { width: 24, height: 24 },
-   header: { padding: 20 },
+  footer: { position: 'absolute', bottom: 15, flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', width: '100%', height: 80, backgroundColor: '#FFF', borderTopWidth: 1, borderTopColor: '#F0F0F0', paddingBottom: 15 },
+  footerButton: { padding: 10, flex: 1, alignItems: 'center' },
+  footerIcon: { width: 25, height: 25 },
+ header: { padding: 20 },
   brandText: { fontSize: 22, fontWeight: 'bold' },
   titleText: { fontSize: 18, color: '#666' },
   searchBar: { paddingHorizontal: 20, marginBottom: 10 },
