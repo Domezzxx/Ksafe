@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 // --- Import ทุกหน้าจอของคุณ ---
 import WelcomeScreen from './WelcomeScreen';
 import WelcomeScreen2 from './WelcomeScreen2';
@@ -21,7 +22,7 @@ import ManageFacilitiesScreen from './ManageFacilitiesScreen';
 import ManageUserScreen from './ManageUserScreen'; 
 import IncidentSortingScreen from './IncidentSortingScreen';
 
-export default function App() {
+function AppContent() {
   const [currentScreen, setCurrentScreen] = useState('Welcome1');
   const [selectedPlace, setSelectedPlace] = useState(null);
   const [tempUserData, setTempUserData] = useState(null);
@@ -86,7 +87,7 @@ export default function App() {
         filter={filterType} 
         onBack={navigateTo.admin} 
       />
-    );
+    );  
   }
 
   if (currentScreen === 'AdminHome') {
@@ -115,4 +116,12 @@ export default function App() {
 
   // Default Screen
   return <HomeScreen currentUserPhone={userPhone} onGoHome={navigateTo.home} onGoSOS={navigateTo.sos} onGoSearch={navigateTo.search} onGoProfile={navigateTo.profile} />;
+}
+
+export default function App() {
+  return (
+    <SafeAreaProvider>
+      <AppContent />
+    </SafeAreaProvider>
+  );
 }
