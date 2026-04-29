@@ -10,51 +10,92 @@ import {
     SafeAreaView,
     StatusBar,
     Vibration,
-    Linking // นำเข้า Linking สำหรับสั่งเปิดแอปโทรศัพท์
+    Linking,
+    Alert
 } from 'react-native';
+import * as Location from 'expo-location';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from './firebaseConfig';
 
 const { width, height } = Dimensions.get('window');
 const SLIDE_WIDTH = width * 0.85;
 const KNOB_SIZE = 64;
 
-// รับ prop emergencyContact ที่ส่งมาจาก App.js
-export default function SOSScreen({ onCancel, emergencyContact }) {
+const saveIncidentAndCall = async (contact, reporterPhone) => {
+    // ✅ Debug: ตรวจสอบว่าได้รับค่า reporterPhone มาถูกต้องหรือไม่
+    console.log('=== SOS saveIncidentAndCall ===');
+    console.log('contact:', contact);
+    console.log('reporterPhone:', reporterPhone);
+
+    try {
+        let { status } = await Location.requestForegroundPermissionsAsync();
+        let locationData = { latitude: null, longitude: null };
+
+        if (status === 'granted') {
+            const location = await Location.getCurrentPositionAsync({
+                accuracy: Location.Accuracy.Balanced,
+            });
+            locationData.latitude = location.coords.latitude;
+            locationData.longitude = location.coords.longitude;
+        }
+
+        await addDoc(collection(db, 'incident_reports'), {
+            service_name: contact.name,
+            phone_called: contact.phone,
+            latitude: locationData.latitude,
+            longitude: locationData.longitude,
+            reporter_id: reporterPhone || 'ไม่ระบุตัวตน',
+            timestamp: serverTimestamp(),
+            source: 'SOS',
+        });
+
+        console.log('✅ บันทึก Firestore สำเร็จ reporter_id:', reporterPhone || 'ไม่ระบุตัวตน');
+
+    } catch (error) {
+        console.error('Error saving SOS incident:', error);
+    } finally {
+        Linking.openURL(`tel:${contact.phone}`).catch(() => {
+            Alert.alert('เกิดข้อผิดพลาด', 'ไม่สามารถโทรออกได้ในขณะนี้');
+        });
+    }
+};
+
+export default function SOSScreen({ emergencyContact: contactFromApp, onCancel, currentUserPhone, onGoHome, onGoSearch, onGoProfile }) {
     const [isCounting, setIsCounting] = useState(false);
     const [timer, setTimer] = useState(5);
     const pan = useRef(new Animated.Value(0)).current;
 
-    const redBarWidth = Animated.add(pan, KNOB_SIZE);
+    // ✅ Debug: ตรวจสอบว่า props ถูกส่งมาถูกต้อง
+    useEffect(() => {
+        console.log('=== SOSScreen mounted ===');
+        console.log('currentUserPhone prop:', currentUserPhone);
+        console.log('emergencyContact prop:', contactFromApp);
+    }, []);
 
-    // กำหนดค่าเริ่มต้นในกรณีที่ยังไม่มีการส่งข้อมูลมา
-    const contactName = emergencyContact?.name || "สถานีตำรวจ";
-    const contactPhone = emergencyContact?.phone || "191";
+    const emergencyContact = contactFromApp || { name: 'สถานีตำรวจ', phone: '191' };
+
+    const redBarWidth = Animated.add(pan, KNOB_SIZE);
 
     useEffect(() => {
         let interval;
         if (isCounting && timer > 0) {
-            Vibration.vibrate(400); 
-
+            Vibration.vibrate(400);
             interval = setInterval(() => {
                 setTimer((prev) => prev - 1);
             }, 1000);
         } else if (timer === 0) {
             Vibration.vibrate([0, 500, 200, 500]);
-            
-            // สั่งให้เปิดแอปโทรศัพท์และโทรออกตามเบอร์ที่ตั้งไว้
-            Linking.openURL(`tel:${contactPhone}`).catch(() => {
-                alert(`ไม่สามารถโทรออกได้ กรุณาโทร ${contactPhone} ด้วยตนเอง`);
-            });
-            
+            saveIncidentAndCall(emergencyContact, currentUserPhone);
             handleReset();
         }
         return () => clearInterval(interval);
-    }, [isCounting, timer, contactPhone]);
+    }, [isCounting, timer]);
 
     const handleReset = () => {
         setIsCounting(false);
         setTimer(5);
         pan.setValue(0);
-        Vibration.cancel(); 
+        Vibration.cancel();
         if (onCancel) onCancel();
     };
 
@@ -87,9 +128,8 @@ export default function SOSScreen({ onCancel, emergencyContact }) {
                     isCounting ? styles.headerTop : styles.headerCenter
                 ]}>
                     <Text style={styles.headerTitle}>SOS ฉุกเฉิน</Text>
-                    {/* แสดงชื่อและเบอร์โทรที่รับค่ามา */}
-                    <Text style={styles.subHeader}>{contactName}</Text>
-                    <Text style={styles.subHeader}>{contactPhone}</Text>
+                    <Text style={styles.subHeader}>{emergencyContact.name}</Text>
+                    <Text style={styles.subHeader}>{emergencyContact.phone}</Text>
                 </View>
 
                 <View style={styles.centerContent}>

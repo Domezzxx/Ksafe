@@ -7,14 +7,14 @@ import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 
 // --- นำเข้า Firestore (ไม่ใช้ Firebase Auth เพราะระบบเช็ค login ผ่าน Firestore เอง) ---
-import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore'; 
-import { db } from './firebaseConfig'; 
+import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { db } from './firebaseConfig';
 
 export default function ProfileScreen({ currentUserPhone, onGoHome, onGoSOS, onGoSearch, onGoProfile, onLogout, onUpdateContact }) {
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [userDocId, setUserDocId] = useState(null); // เก็บ document id ของ user ใน Firestore
-  
+
   const [showEmergencyModal, setShowEmergencyModal] = useState(false);
   const [showPickerModal, setShowPickerModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -62,12 +62,12 @@ export default function ProfileScreen({ currentUserPhone, onGoHome, onGoSOS, onG
         if (!snapshot.empty) {
           const userDoc = snapshot.docs[0];
           setUserDocId(userDoc.id); // เก็บ doc id ไว้ใช้ตอนบันทึก/แก้ไข
-          
+
           const data = userDoc.data();
           // รวมข้อมูลจาก firestore เข้ากับ profile state
           // หมายเหตุ: ใน firestore ใช้ key 'phone_number' แต่ใน state ใช้ 'phone'
-          setProfile(prev => ({ 
-            ...prev, 
+          setProfile(prev => ({
+            ...prev,
             ...data,
             phone: data.phone_number || currentUserPhone, // map phone_number → phone
           }));
@@ -166,7 +166,7 @@ export default function ProfileScreen({ currentUserPhone, onGoHome, onGoSOS, onG
   const handleMapPress = async (e) => {
     const coord = e.nativeEvent.coordinate;
     setProfile(prev => ({ ...prev, coordinate: coord }));
-    
+
     try {
       const res = await fetch(
         `https://nominatim.openstreetmap.org/reverse?lat=${coord.latitude}&lon=${coord.longitude}&format=json&accept-language=th`
@@ -174,14 +174,14 @@ export default function ProfileScreen({ currentUserPhone, onGoHome, onGoSOS, onG
       const data = await res.json();
       const address = data.display_name || `${coord.latitude.toFixed(5)}, ${coord.longitude.toFixed(5)}`;
       setProfile(prev => ({ ...prev, coordinate: coord, address: address }));
-    } catch(err) {
+    } catch (err) {
       setProfile(prev => ({ ...prev, coordinate: coord, address: `${coord.latitude.toFixed(5)}, ${coord.longitude.toFixed(5)}` }));
     }
   };
 
   // --- 2. บันทึกข้อมูลลง Firestore (ใช้ userDocId ที่เก็บไว้ตอนโหลด) ---
   const confirmSave = async () => {
-    setShowConfirmModal(false); 
+    setShowConfirmModal(false);
 
     if (!userDocId) {
       Alert.alert("ผิดพลาด", "ไม่พบข้อมูลผู้ใช้ กรุณาเข้าสู่ระบบอีกครั้ง");
@@ -190,14 +190,14 @@ export default function ProfileScreen({ currentUserPhone, onGoHome, onGoSOS, onG
 
     try {
       const userDocRef = doc(db, 'users', userDocId);
-      
+
       // แยก phone ออก เพราะใน Firestore ใช้ key 'phone_number' (ไม่อัปเดต field นี้)
       // และไม่อัปเดต password กับ role เพื่อความปลอดภัย
       const { phone, password, role, ...profileToSave } = profile;
-      
+
       await updateDoc(userDocRef, profileToSave);
-      
-      setIsEditing(false); 
+
+      setIsEditing(false);
       Alert.alert("สำเร็จ", "บันทึกข้อมูลเรียบร้อยแล้ว");
     } catch (error) {
       console.error("Error saving profile:", error);
@@ -260,13 +260,13 @@ export default function ProfileScreen({ currentUserPhone, onGoHome, onGoSOS, onG
               </View>
 
               <TouchableOpacity style={styles.inputBox} onPress={() => {
-                  try {
-                    const parts = profile.birthDate.split('/');
-                    const yearAD = parseInt(parts[2]) - 543;
-                    setDateValue(new Date(yearAD, parseInt(parts[1]) - 1, parseInt(parts[0])));
-                  } catch(e) { setDateValue(new Date()); }
-                  setShowDatePicker(true);
-                }}>
+                try {
+                  const parts = profile.birthDate.split('/');
+                  const yearAD = parseInt(parts[2]) - 543;
+                  setDateValue(new Date(yearAD, parseInt(parts[1]) - 1, parseInt(parts[0])));
+                } catch (e) { setDateValue(new Date()); }
+                setShowDatePicker(true);
+              }}>
                 <Text style={styles.inputLabel}>เลือกวันเกิด</Text>
                 <View style={styles.datePickerRow}>
                   <Text style={styles.inputText}>{profile.birthDate}</Text>
@@ -313,7 +313,7 @@ export default function ProfileScreen({ currentUserPhone, onGoHome, onGoSOS, onG
               <TouchableOpacity style={styles.inputBox} onPress={() => setShowMapModal(true)}>
                 <Text style={styles.inputLabel}>แตะเพื่อเปิดแผนที่และปักหมุด</Text>
                 <View style={styles.datePickerRow}>
-                  <Text style={[styles.inputText, {color: '#007AFF'}]}>จัดการพิกัดที่อยู่ปัจจุบัน</Text>
+                  <Text style={[styles.inputText, { color: '#007AFF' }]}>จัดการพิกัดที่อยู่ปัจจุบัน</Text>
                   <Ionicons name="map" size={20} color="#007AFF" />
                 </View>
               </TouchableOpacity>
@@ -372,7 +372,7 @@ export default function ProfileScreen({ currentUserPhone, onGoHome, onGoSOS, onG
             </View>
           </TouchableOpacity>
 
-          <View style={{ height: 100 }} /> 
+          <View style={{ height: 100 }} />
         </ScrollView>
       )}
 
@@ -487,7 +487,7 @@ export default function ProfileScreen({ currentUserPhone, onGoHome, onGoSOS, onG
                       .catch(err => console.error("Error updating emergency contact:", err));
                   }
                   if (onUpdateContact) {
-                     onUpdateContact(item);
+                    onUpdateContact(item);
                   }
                   setShowEmergencyModal(false);
                 }}
