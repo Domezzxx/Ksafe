@@ -19,6 +19,42 @@ const SERVICE_LIST = [
 
 const FOOTER_TAB_HEIGHT = 56;
 
+// ✅ ฟังก์ชันคำนวณระยะทาง (เหมือนกับ IncidentSortingScreen)
+const getDistanceFromLatLonInKm = (lat1, lon1, lat2, lon2) => {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLon = (lon2 - lon1) * (Math.PI / 180);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
+
+// ✅ ฟังก์ชันคำนวณ severity แบบเดียวกับ IncidentSortingScreen (proximity-based)
+const computeSeverity = (rawData) => {
+  const radiusKm = 1.0;
+  return rawData.map((item, _, arr) => {
+    if (!item.hasCoords) return { ...item, severity: 'low', nearbyCount: 0 };
+
+    let nearbyCount = 0;
+    for (let i = 0; i < arr.length; i++) {
+      const other = arr[i];
+      if (!other.hasCoords) continue;
+      if (Math.abs(item.lat - other.lat) > 0.015 || Math.abs(item.lng - other.lng) > 0.015) continue;
+      const dist = getDistanceFromLatLonInKm(item.lat, item.lng, other.lat, other.lng);
+      if (dist <= radiusKm) nearbyCount++;
+    }
+
+    let severity = 'low';
+    if (nearbyCount >= 20) severity = 'high';
+    else if (nearbyCount >= 5) severity = 'medium';
+
+    return { ...item, severity, nearbyCount };
+  });
+};
+
 const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile, onGoToSorting }) => {
   const insets = useSafeAreaInsets();
   const FOOTER_HEIGHT = FOOTER_TAB_HEIGHT + insets.bottom;
@@ -38,22 +74,34 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      const data = snapshot.docs.map(doc => {
-        const item = doc.data();
-        let sev = item.severity;
-        if (!sev) {
-          sev = item.count >= 10 ? 'high' : item.count >= 5 ? 'medium' : 'low';
+      // ✅ ดึงพิกัดแบบ robust (รองรับทั้ง latitude/longitude และ GeoPoint)
+      const rawData = snapshot.docs.map(doc => {
+        const data = doc.data();
+        let lat = data.latitude !== undefined ? parseFloat(data.latitude) : NaN;
+        let lng = data.longitude !== undefined ? parseFloat(data.longitude) : NaN;
+        if (data.location && typeof data.location.latitude === 'number') {
+          lat = data.location.latitude;
+          lng = data.location.longitude;
         }
-        return { id: doc.id, ...item, severity: sev };
+        return {
+          id: doc.id,
+          ...data,
+          lat,
+          lng,
+          hasCoords: !isNaN(lat) && !isNaN(lng),
+        };
       });
 
-      const todayCount = data.filter(item => {
+      // ✅ คำนวณ severity แบบเดียวกับ IncidentSortingScreen
+      const processed = computeSeverity(rawData);
+
+      const todayCount = processed.filter(item => {
         if (!item.createdAt) return false;
         const d = item.createdAt.toDate ? item.createdAt.toDate() : new Date(item.createdAt);
         return d >= today;
       }).length;
 
-      setIncidents(data);
+      setIncidents(processed);
       setStats(prev => ({ ...prev, todayIncidents: todayCount }));
       setLoading(false);
     }, (error) => {
@@ -127,9 +175,7 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
 
         {/* ── Stat Cards ── */}
         <View style={styles.cardRow}>
-
-          {/* ✅ เปลี่ยนเป็น TouchableOpacity เพื่อกดไปหน้า Sorting */}
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.cardBig, { backgroundColor: '#FF5A3C' }]}
             activeOpacity={0.9}
             onPress={() => onGoToSorting && onGoToSorting('all')}
@@ -173,49 +219,82 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
               <Text style={styles.loaderText}>กำลังโหลดพิกัด...</Text>
             </View>
           ) : (
-            <MapView
-              provider={PROVIDER_GOOGLE}
-              style={styles.map}
-              initialRegion={{ latitude: 14.9071, longitude: 102.0040, latitudeDelta: 0.05, longitudeDelta: 0.05 }}
-            >
-              {incidents.map((item) => {
-                const config = getStyle(item.severity);
-                const lat = parseFloat(item.latitude);
-                const lng = parseFloat(item.longitude);
-                if (isNaN(lat) || isNaN(lng)) return null;
-                return (
-                  <React.Fragment key={item.id}>
-                    <Circle
-                      center={{ latitude: lat, longitude: lng }}
-                      radius={400}
-                      fillColor={config.color}
-                      strokeColor="transparent"
-                    />
-                    <Marker
-                      coordinate={{ latitude: lat, longitude: lng }}
-                      // ✅ สำคัญ: ใช้ onCalloutPress ที่ตัว Marker เพื่อความเสถียรของปุ่มบน Android
-                      onCalloutPress={() => onGoToSorting && onGoToSorting(item.severity)}
-                    >
-                      <View style={[styles.markerOuter, { borderColor: config.solid }]}>
-                        <View style={[styles.markerInner, { backgroundColor: config.solid }]} />
-                      </View>
-                      <Callout tooltip>
-                        {/* ไม่ควรใช้ TouchableOpacity ซ้อนใน Callout บน Android ให้ใช้ View ปกติ */}
-                        <View style={styles.calloutBox}>
-                          <View style={[styles.calloutBadge, { backgroundColor: config.solid }]}>
-                            <Text style={styles.calloutBadgeText}>{config.label}</Text>
-                          </View>
-                          <Text style={styles.calloutSub}>{item.service_name || 'แจ้งเหตุ SOS'}</Text>
-                          <View style={[styles.goBtn, { backgroundColor: config.solid }]}>
-                            <Text style={styles.goBtnText}>ดูรายการ →</Text>
-                          </View>
+            <>
+              <MapView
+                provider={PROVIDER_GOOGLE}
+                style={styles.map}
+                initialRegion={{ latitude: 14.9071, longitude: 102.0040, latitudeDelta: 0.05, longitudeDelta: 0.05 }}
+              >
+                {incidents.map((item) => {
+                  if (!item.hasCoords) return null;
+                  const config = getStyle(item.severity);
+                  return (
+                    <React.Fragment key={item.id}>
+                      <Circle
+                        center={{ latitude: item.lat, longitude: item.lng }}
+                        radius={400}
+                        fillColor={config.color}
+                        strokeColor="transparent"
+                      />
+                      {/* ✅ onCalloutPress บน Marker — ทำงานได้ทั้ง iOS และ Android */}
+                      <Marker
+                        coordinate={{ latitude: item.lat, longitude: item.lng }}
+                        onCalloutPress={() => onGoToSorting && onGoToSorting(item.severity)}
+                      >
+                        <View style={[styles.markerOuter, { borderColor: config.solid }]}>
+                          <View style={[styles.markerInner, { backgroundColor: config.solid }]} />
                         </View>
-                      </Callout>
-                    </Marker>
-                  </React.Fragment>
-                );
-              })}
-            </MapView>
+                        <Callout tooltip>
+                          <View style={styles.calloutBox}>
+                            <View style={[styles.calloutBadge, { backgroundColor: config.solid }]}>
+                              <Text style={styles.calloutBadgeText}>{config.label}</Text>
+                            </View>
+                            <Text style={styles.calloutSub} numberOfLines={1}>
+                              {item.service_name || 'แจ้งเหตุ SOS'}
+                            </Text>
+                            <Text style={styles.calloutNearby}>
+                              พบ {item.nearbyCount} ครั้งในพื้นที่
+                            </Text>
+                            <View style={[styles.goBtn, { backgroundColor: config.solid }]}>
+                              <Text style={styles.goBtnText}>ดูรายการ →</Text>
+                            </View>
+                          </View>
+                        </Callout>
+                      </Marker>
+                    </React.Fragment>
+                  );
+                })}
+              </MapView>
+
+              {/* ✅ Legend + ปุ่มดูทั้งหมด ซ้อนบนแผนที่ */}
+              <View style={styles.mapOverlay}>
+                <View style={styles.legendRow}>
+                  {[
+                    { sev: 'high',   label: 'เสี่ยงสูง',  color: '#EF4444' },
+                    { sev: 'medium', label: 'ปานกลาง',    color: '#F59E0B' },
+                    { sev: 'low',    label: 'เฝ้าระวัง',  color: '#FACC15' },
+                  ].map(({ sev, label, color }) => (
+                    <TouchableOpacity
+                      key={sev}
+                      style={styles.legendItem}
+                      onPress={() => onGoToSorting && onGoToSorting(sev)}
+                      activeOpacity={0.75}
+                    >
+                      <View style={[styles.legendDot, { backgroundColor: color }]} />
+                      <Text style={styles.legendText}>{label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <TouchableOpacity
+                  style={styles.viewAllBtn}
+                  onPress={() => onGoToSorting && onGoToSorting('all')}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.viewAllText}>ดูทั้งหมด →</Text>
+                </TouchableOpacity>
+              </View>
+            </>
           )}
         </View>
 
@@ -252,7 +331,7 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
   );
 };
 
-// ── Sub Components (คงเดิม) ──
+// ── Sub Components ──
 
 const ServiceRow = ({ name, count, image, accent, maxCount, isLast }) => {
   const pct = maxCount > 0 ? count / maxCount : 0;
@@ -346,12 +425,63 @@ const styles = StyleSheet.create({
     width: 160, backgroundColor: '#FFF',
     borderRadius: 16, padding: 14,
     alignItems: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15, shadowRadius: 8, elevation: 6,
   },
   calloutBadge: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, marginBottom: 6 },
   calloutBadgeText: { fontSize: 12, fontWeight: '700', color: '#FFF' },
-  calloutSub: { fontSize: 11, color: '#6B7280', marginBottom: 10 },
+  calloutSub: { fontSize: 11, color: '#6B7280', marginBottom: 4, textAlign: 'center' },
+  calloutNearby: { fontSize: 10, color: '#9CA3AF', marginBottom: 10 },
   goBtn: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8 },
   goBtnText: { color: '#FFF', fontSize: 11, fontWeight: '700' },
+
+  // ✅ Overlay: Legend + View All Button
+  mapOverlay: {
+    position: 'absolute',
+    bottom: 12,
+    left: 12,
+    right: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  legendRow: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    gap: 10,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1, shadowRadius: 4, elevation: 3,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  legendDot: {
+    width: 10, height: 10, borderRadius: 5,
+  },
+  legendText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  viewAllBtn: {
+    backgroundColor: '#FF5A3C',
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    shadowColor: '#FF5A3C', shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.35, shadowRadius: 6, elevation: 4,
+  },
+  viewAllText: {
+    color: '#FFF',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+
   serviceListWrapper: {
     marginHorizontal: 18, marginBottom: 10,
     backgroundColor: '#FFF', borderRadius: 22, overflow: 'hidden',
