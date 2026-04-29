@@ -11,13 +11,13 @@ import {
   ActivityIndicator,
   Alert,
   Dimensions,
-  SafeAreaView
 } from 'react-native';
 import { collection, query, onSnapshot, addDoc, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db } from './firebaseConfig'; 
 import { Edit2, Plus, Search, Trash2, ChevronDown } from 'lucide-react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
+import {SafeAreaView} from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 
@@ -353,7 +353,7 @@ const styles = StyleSheet.create({
   deleteLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 15, padding: 10 },
   cancelBtn: { marginTop: 5, alignItems: 'center', padding: 15 },
   
-  footer: { position: 'absolute', bottom: 0, flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', width: '100%', height: 80, backgroundColor: '#FFF', borderTopWidth: 1, borderTopColor: '#F0F0F0', paddingBottom: 15 },
+  footer: { position: 'absolute', bottom: 15, flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', width: '100%', height: 80, backgroundColor: '#FFF', borderTopWidth: 1, borderTopColor: '#F0F0F0', paddingBottom: 15 },
   footerButton: { padding: 10, flex: 1, alignItems: 'center' },
   footerIcon: { width: 25, height: 25 },
    header: { padding: 20 },
