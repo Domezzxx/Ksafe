@@ -1,38 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  FlatList,
-  Image,
-  StyleSheet,
-  ScrollView,
-  ActivityIndicator,
-  Alert,
-  Dimensions,
+  View, Text, TextInput, TouchableOpacity, FlatList, Image,
+  StyleSheet, ScrollView, ActivityIndicator, Alert, Dimensions,
 } from 'react-native';
 import { collection, query, onSnapshot, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db } from './firebaseConfig';
-import { Edit2, Search, Calendar } from 'lucide-react-native';
-import {SafeAreaView} from 'react-native-safe-area-context';
-
+import { Edit2, Calendar } from 'lucide-react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 
-export default function ManageUserScreen({
-  onGoHome,
-  onGoSOS,
-  onGoSearch,
-  onGoProfile
-}) {
+export default function ManageUserScreen({ onGoHome, onGoSOS, onGoSearch, onGoProfile }) {
   const [users, setUsers] = useState([]);
-  const [emergencyContacts, setEmergencyContacts] = useState([]); // ✅ เพิ่ม State เก็บข้อมูลติดต่อฉุกเฉิน
+  const [emergencyContacts, setEmergencyContacts] = useState([]);
   const [searchText, setSearchText] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // User States
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -44,59 +28,43 @@ export default function ManageUserScreen({
   const [organDonor, setOrganDonor] = useState('ฉันไม่ใช่ผู้บริจาคอวัยวะ');
   const [aboutMe, setAboutMe] = useState('');
   const [address, setaddress] = useState('');
-  
-  // ✅ เพิ่ม State สำหรับแสดงข้อมูลที่ดึงมาจากตาราง emergency_contacts (แบบ Read-only)
+
   const [contactName, setContactName] = useState('ไม่มีข้อมูล');
   const [contactPhone, setContactPhone] = useState('ไม่มีข้อมูล');
+  const [contactDesc, setContactDesc] = useState('ไม่มีข้อมูล');
 
   useEffect(() => {
     if (!db) return;
 
-    // 1. ดึงข้อมูลจากคอลเลกชัน users
+    // ดึงข้อมูล Users
     const qUsers = query(collection(db, "users"));
     const unsubUsers = onSnapshot(qUsers, (querySnapshot) => {
       const data = [];
-      querySnapshot.forEach((doc) => {
-        data.push({ ...doc.data(), id: doc.id });
-      });
+      querySnapshot.forEach((doc) => { data.push({ ...doc.data(), id: doc.id }); });
       setUsers(data);
     }, (error) => console.error("Users Firestore Error:", error));
 
-    // 2. ดึงข้อมูลจากคอลเลกชัน emergency_contacts
-    const qEmergency = query(collection(db, "emergency_contacts"));
+    // ดึงข้อมูล Emergency Contacts
+    const qEmergency = query(collection(db, "emergencyContact"));
     const unsubEmergency = onSnapshot(qEmergency, (querySnapshot) => {
       const data = [];
-      querySnapshot.forEach((doc) => {
-        data.push({ ...doc.data(), id: doc.id });
+      querySnapshot.forEach((doc) => { 
+        // เก็บ docId ไว้ด้วยเผื่อกรณีที่ฟิลด์ id ภายในไม่ตรงกับชื่อเอกสาร
+        data.push({ ...doc.data(), docId: doc.id }); 
       });
       setEmergencyContacts(data);
-    }, (error) => console.error("Emergency Firestore Error:", error));
+    }, (error) => console.error("EmergencyContact Firestore Error:", error));
 
-    return () => {
-      unsubUsers();
-      unsubEmergency();
-    };
+    return () => { unsubUsers(); unsubEmergency(); };
   }, []);
 
   const handleUpdate = async () => {
-    if (!firstName) {
-      Alert.alert("แจ้งเตือน", "กรุณากรอกชื่อ");
-      return;
-    }
+    if (!firstName) { Alert.alert("แจ้งเตือน", "กรุณากรอกชื่อ"); return; }
     setLoading(true);
     try {
-      const userRef = doc(db, "users", selectedUserId);
-      await updateDoc(userRef, {
-        firstName: firstName,
-        lastName: lastName,
-        weight: weight,
-        height: height,
-        birthDate: birthDate,
-        gender: gender,
-        bloodType: bloodType,
-        organDonor: organDonor,
-        aboutMe: aboutMe,
-        address: address,
+      await updateDoc(doc(db, "users", selectedUserId), {
+        firstName, lastName, weight, height, birthDate,
+        gender, bloodType, organDonor, aboutMe, address,
         updatedAt: new Date().toISOString()
       });
       Alert.alert("สำเร็จ", "อัปเดตข้อมูลผู้ใช้เรียบร้อย");
@@ -111,9 +79,8 @@ export default function ManageUserScreen({
   const handleDelete = async () => {
     Alert.alert("ยืนยัน", "คุณต้องการลบผู้ใช้นี้ใช่หรือไม่?", [
       { text: "ยกเลิก" },
-      { 
-        text: "ลบ", 
-        style: 'destructive',
+      {
+        text: "ลบ", style: 'destructive',
         onPress: async () => {
           try {
             await deleteDoc(doc(db, "users", selectedUserId));
@@ -137,20 +104,25 @@ export default function ManageUserScreen({
     setAboutMe(user.aboutMe || '');
     setaddress(user.address || '');
 
-    // ✅ ค้นหาข้อมูลติดต่อฉุกเฉินที่มี user_phone ตรงกับเบอร์ของผู้ใช้
-    const contact = emergencyContacts.find(c => c.user_phone === user.phone);
+    // ✅ ค้นหา Contact โดยตรวจสอบทั้งฟิลด์ id และ docId ของเอกสาร
+    const contact = emergencyContacts.find(c => 
+        (c.id === user.id) || (c.docId === user.id)
+    );
+
     if (contact) {
       setContactName(contact.name || 'ไม่ระบุชื่อ');
-      setContactPhone(contact.phone_number || 'ไม่ระบุเบอร์');
+      setContactPhone(contact.phone || 'ไม่ระบุเบอร์');
+      setContactDesc(contact.desc || 'ไม่มีรายละเอียด');
     } else {
       setContactName('ไม่มีข้อมูล');
       setContactPhone('ไม่มีข้อมูล');
+      setContactDesc('ไม่มีข้อมูล');
     }
 
     setIsEditMode(true);
   };
 
-  const filteredUsers = users.filter(u => 
+  const filteredUsers = users.filter(u =>
     (u.firstName || "").toLowerCase().includes(searchText.toLowerCase()) ||
     (u.phone || "").includes(searchText)
   );
@@ -160,20 +132,17 @@ export default function ManageUserScreen({
       <View style={styles.container}>
         <SafeAreaView style={{ flex: 1 }}>
           <View style={styles.header}>
-                            <Text style={styles.brandText}>Ksafe</Text>
-                            <Text style={styles.titleText}>จัดการผู้ใช้</Text>
-                          </View>
-
-          
-                    <View style={styles.searchBar}>
-                            <TextInput 
-                              placeholder="ค้นหาในรายการ..." 
-                              style={styles.searchInput} 
-                              value={searchText} 
-                              onChangeText={setSearchText} 
-                            />
-                          </View>
-
+            <Text style={styles.brandText}>Ksafe</Text>
+            <Text style={styles.titleText}>จัดการผู้ใช้</Text>
+          </View>
+          <View style={styles.searchBar}>
+            <TextInput
+              placeholder="ค้นหาชื่อ หรือ เบอร์โทร..."
+              style={styles.searchInput}
+              value={searchText}
+              onChangeText={setSearchText}
+            />
+          </View>
           <FlatList
             data={filteredUsers}
             keyExtractor={item => item.id}
@@ -207,16 +176,15 @@ export default function ManageUserScreen({
         <TouchableOpacity onPress={() => setIsEditMode(false)} style={styles.backBtn}>
           <Text style={styles.backArrow}>←</Text>
         </TouchableOpacity>
-        
+
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 25, paddingBottom: 100 }}>
           <Text style={styles.editTitle}>แก้ไขข้อมูลผู้ใช้</Text>
-          
+
           <Text style={styles.sectionLabel}>ไอดีผู้ใช้งาน</Text>
           <View style={[styles.selectBox, { backgroundColor: '#F3F4F6' }]}><Text>{selectedUserId}</Text></View>
 
           <View style={styles.formContainer}>
             <Text style={styles.sectionLabel}>ข้อมูลทั่วไป</Text>
-            
             <View style={styles.row}>
               <View style={[styles.inputBox, { flex: 1, marginRight: 10 }]}>
                 <Text style={styles.floatLabel}>ชื่อ</Text>
@@ -239,43 +207,31 @@ export default function ManageUserScreen({
               </View>
             </View>
 
-            <Text style={styles.sectionLabel}>เลือกปีเกิด</Text>
+            <Text style={styles.sectionLabel}>วัน/เดือน/ปีเกิด</Text>
             <View style={styles.inputBox}>
-              <TextInput value={birthDate} onChangeText={setBirthDate} placeholder="01/01/2567" style={styles.inputStyle} />
+              <TextInput value={birthDate} onChangeText={setBirthDate} placeholder="01/01/25XX" style={styles.inputStyle} />
               <Calendar size={18} color="#666" style={{ position: 'absolute', right: 15, bottom: 15 }} />
             </View>
 
             <Text style={styles.sectionLabel}>เพศ</Text>
-            <TouchableOpacity style={styles.selectBox}><Text>{gender}</Text></TouchableOpacity>
+            <View style={styles.selectBox}><Text>{gender}</Text></View>
 
             <Text style={styles.sectionLabel}>กรุ๊ปเลือด</Text>
-            <TouchableOpacity style={styles.selectBox}><Text>{bloodType}</Text></TouchableOpacity>
+            <View style={styles.selectBox}><Text>{bloodType}</Text></View>
 
             <Text style={styles.sectionLabel}>สถานะบริจาคอวัยวะ</Text>
-            <TouchableOpacity style={styles.selectBox}><Text>{organDonor}</Text></TouchableOpacity>
+            <View style={styles.selectBox}><Text>{organDonor}</Text></View>
 
             <Text style={styles.sectionLabel}>ข้อมูลสุขภาพ (โรคประจำตัว)</Text>
             <View style={[styles.inputBox, { height: 80 }]}>
-               <TextInput multiline value={aboutMe} onChangeText={setAboutMe} style={styles.inputStyle} />
+              <TextInput multiline value={aboutMe} onChangeText={setAboutMe} style={styles.inputStyle} />
             </View>
 
             <Text style={styles.sectionLabel}>ที่อยู่</Text>
             <View style={[styles.inputBox, { height: 60 }]}>
-               <TextInput multiline value={address} onChangeText={setaddress} style={styles.inputStyle} />
+              <TextInput multiline value={address} onChangeText={setaddress} style={styles.inputStyle} />
             </View>
 
-            {/* --- ✅ ส่วนที่เพิ่มเข้ามา: ดึงข้อมูลจากตาราง emergency_contacts --- */}
-            <View style={{ marginTop: 20, padding: 15, backgroundColor: '#FFF7ED', borderRadius: 16, borderWidth: 1, borderColor: '#FFEDD5' }}>
-              <Text style={[styles.sectionLabel, { marginTop: 0, color: '#F48E54' }]}>ข้อมูลติดต่อฉุกเฉิน</Text>
-              <View style={{ marginTop: 10 }}>
-                <Text style={{ fontSize: 13, color: '#666' }}>ชื่อผู้ติดต่อ:</Text>
-                <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#333' }}>{contactName}</Text>
-              </View>
-              <View style={{ marginTop: 10 }}>
-                <Text style={{ fontSize: 13, color: '#666' }}>เบอร์โทรฉุกเฉิน:</Text>
-                <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#F48E54' }}>{contactPhone}</Text>
-              </View>
-            </View>
 
             <View style={styles.buttonRow}>
               <TouchableOpacity style={styles.saveBtn} onPress={handleUpdate} disabled={loading}>
@@ -294,12 +250,11 @@ export default function ManageUserScreen({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
-  headerArea: { paddingHorizontal: 25, marginTop: 10 },
-  headerTitle: { fontSize: 22, fontWeight: '700', color: '#000' },
-  headerSubtitle: { fontSize: 24, fontWeight: 'bold', marginTop: 15 },
-  searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', marginHorizontal: 20, borderRadius: 12, paddingHorizontal: 15, marginTop: 20, marginBottom: 15 },
-  searchIcon: { marginRight: 10 },
-  searchInput: { flex: 1, height: 45 },
+  header: { padding: 20 },
+  brandText: { fontSize: 22, fontWeight: 'bold' },
+  titleText: { fontSize: 18, color: '#666' },
+  searchBar: { paddingHorizontal: 20, marginBottom: 10 },
+  searchInput: { backgroundColor: '#F5F5F5', padding: 12, borderRadius: 12 },
   userCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F9FAFB', padding: 15, borderRadius: 12, marginBottom: 10, borderWidth: 1, borderColor: '#F3F4F6' },
   cardInfo: { flex: 1 },
   userName: { fontSize: 16, fontWeight: '600' },
@@ -314,20 +269,21 @@ const styles = StyleSheet.create({
   inputBox: { borderWidth: 1, borderColor: '#F48E54', borderRadius: 12, paddingHorizontal: 15, paddingVertical: 8, backgroundColor: '#fff', minHeight: 55 },
   floatLabel: { fontSize: 12, color: '#999' },
   inputStyle: { fontSize: 16, color: '#000', marginTop: 2 },
-  selectBox: { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, padding: 15, backgroundColor: '#fff', flexDirection: 'row', justifyContent: 'space-between' },
+  selectBox: { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, padding: 15, backgroundColor: '#fff', marginBottom: 5 },
+  
+  // สไตล์สำหรับ Card ข้อมูลฉุกเฉิน
+  emergencyContactCard: { marginTop: 20, padding: 15, backgroundColor: '#FFF7ED', borderRadius: 16, borderWidth: 1, borderColor: '#FFEDD5' },
+  emergencyLabel: { fontSize: 15, fontWeight: 'bold', color: '#F48E54', marginBottom: 10 },
+  contactInfoRow: { marginBottom: 8 },
+  contactSubLabel: { fontSize: 12, color: '#666' },
+  contactValueText: { fontSize: 16, fontWeight: 'bold', color: '#333' },
+
   buttonRow: { flexDirection: 'row', marginTop: 30, justifyContent: 'space-between' },
   saveBtn: { backgroundColor: '#22C55E', paddingVertical: 12, borderRadius: 12, flex: 1, marginRight: 10, alignItems: 'center' },
   saveBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 18 },
   deleteBtn: { backgroundColor: '#EF4444', paddingVertical: 12, borderRadius: 12, flex: 1, alignItems: 'center' },
   deleteBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 18 },
-  footer: { position: 'absolute', bottom: 15, flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', width: '100%', height: 80, backgroundColor: '#FFF', borderTopWidth: 1, borderTopColor: '#F0F0F0', paddingBottom: 15 },
+  footer: { position: 'absolute', bottom: 0, flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', width: '100%', height: 80, backgroundColor: '#FFF', borderTopWidth: 1, borderTopColor: '#F0F0F0', paddingBottom: 15 },
   footerButton: { padding: 10, flex: 1, alignItems: 'center' },
   footerIcon: { width: 25, height: 25 },
- header: { padding: 20 },
-  brandText: { fontSize: 22, fontWeight: 'bold' },
-  titleText: { fontSize: 18, color: '#666' },
-  searchBar: { paddingHorizontal: 20, marginBottom: 10 },
-  searchInput: { backgroundColor: '#F5F5F5', padding: 12, borderRadius: 12 },
-  
- 
 });
