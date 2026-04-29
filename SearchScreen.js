@@ -7,8 +7,9 @@ import {
   FlatList,
   ActivityIndicator,
   StyleSheet,
-  Image, // เพิ่มการ import Image เพื่อใช้ใน Footer
-  SafeAreaView
+  Image,
+  SafeAreaView,
+  StatusBar
 } from 'react-native';
 
 // ตรวจสอบชื่อไฟล์ config ของคุณ
@@ -25,7 +26,6 @@ export default function SearchScreen({ onBack, onGoHome, onGoSOS, onGoSearch, on
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // ดึงข้อมูลจากคอลเลกชัน facilities
     const q = query(collection(db, 'facilities'));
     
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -43,7 +43,6 @@ export default function SearchScreen({ onBack, onGoHome, onGoSOS, onGoSearch, on
     return () => unsubscribe();
   }, []);
 
-  // 💡 Filter ข้อมูลโดยอ้างอิงฟิลด์ "ประเภท" และ "ชื่อ" ภาษาไทย
   const filteredData = locations.filter(item => {
     const matchCategory =
       selectedCategory === 'ทั้งหมด' || item.ประเภท === selectedCategory;
@@ -56,44 +55,51 @@ export default function SearchScreen({ onBack, onGoHome, onGoSOS, onGoSearch, on
   });
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#fff' }}>
-      <SafeAreaView style={{ flex: 1, paddingHorizontal: 16 }}>
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" />
+      <SafeAreaView style={styles.safeArea}>
         
-        {/* ส่วนหัว และ ช่องค้นหา */}
-        <TouchableOpacity onPress={onBack} style={{ marginTop: 20, paddingVertical: 5 }}>
-          <Text style={{ fontSize: 18, color: '#ff7a00', fontWeight: '600' }}></Text>
-        </TouchableOpacity>
+        {/* Header Section */}
+        <View style={styles.headerContainer}>
+          <TouchableOpacity onPress={onBack} style={styles.backButton}>
+             {/* ใส่ Text หรือ Icon ย้อนกลับได้ที่นี่ */}
+          </TouchableOpacity>
+<View style={styles.header}>
+                  <Text style={styles.brandText}>Ksafe</Text>
+                  <Text style={styles.titleText}>ค้นหาสถานที่</Text>
+                </View>
+          <TextInput
+            placeholder="ค้นหาสถานที่..."
+            value={searchText}
+            onChangeText={setSearchText}
+            placeholderTextColor="#999"
+            style={styles.searchInput}
+          />
 
-        <TextInput
-          placeholder="ค้นหาสถานที่..."
-          value={searchText}
-          onChangeText={setSearchText}
-          style={{
-            borderWidth: 1, borderColor: '#ddd', borderRadius: 12,
-            padding: 15, marginVertical: 15, fontSize: 16
-          }}
-        />
-
-        {/* 📂 หมวดหมู่ */}
-        <View style={{ marginBottom: 10 }}>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-            {categories.map((cat) => (
-              <TouchableOpacity
-                key={cat}
-                onPress={() => setSelectedCategory(cat)}
-                style={{
-                  paddingHorizontal: 15, paddingVertical: 8, margin: 4, borderRadius: 20,
-                  backgroundColor: selectedCategory === cat ? '#ff7a00' : '#f0f0f0'
-                }}
-              >
-                <Text style={{ 
-                  color: selectedCategory === cat ? '#fff' : '#555',
-                  fontWeight: selectedCategory === cat ? 'bold' : 'normal'
-                }}>
-                  {cat}
-                </Text>
-              </TouchableOpacity>
-            ))}
+          {/* 📂 หมวดหมู่ */}
+          <View style={styles.categoryWrapper}>
+            <View style={styles.categoryContainer}>
+              {categories.map((cat) => (
+                <TouchableOpacity
+                  key={cat}
+                  onPress={() => setSelectedCategory(cat)}
+                  style={[
+                    styles.categoryButton,
+                    { backgroundColor: selectedCategory === cat ? '#ff7a00' : '#f0f0f0' }
+                  ]}
+                >
+                  <Text style={[
+                    styles.categoryText,
+                    { 
+                      color: selectedCategory === cat ? '#fff' : '#555',
+                      fontWeight: selectedCategory === cat ? 'bold' : 'normal'
+                    }
+                  ]}>
+                    {cat}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
         </View>
 
@@ -104,38 +110,33 @@ export default function SearchScreen({ onBack, onGoHome, onGoSOS, onGoSearch, on
           <FlatList
             data={filteredData}
             keyExtractor={(item) => item.id}
-            contentContainerStyle={{ paddingBottom: 100 }}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
             renderItem={({ item }) => (
-              <View style={{
-                backgroundColor: '#f8f8f8', padding: 18, borderRadius: 16, marginBottom: 12,
-                borderWidth: 1, borderColor: '#eee'
-              }}>
+              <View style={styles.card}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                  <Text style={{ fontSize: 17, fontWeight: 'bold', flex: 1, color: '#333' }}>
+                  <Text style={styles.cardTitle} numberOfLines={1}>
                     {item.ชื่อ}
                   </Text>
-                  <Text style={{ color: '#ff7a00', fontSize: 13, fontWeight: '600' }}>2 กม.</Text>
+                  <Text style={styles.distanceText}>2 กม.</Text>
                 </View>
                 
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}>
-                  <Text style={{ color: '#777', fontSize: 14, flex: 1, marginRight: 10 }} numberOfLines={2}>
+                  <Text style={styles.cardAddress} numberOfLines={2}>
                     {item.ที่อยู่}
                   </Text>
                   
                   <TouchableOpacity
                     onPress={() => goToDetail(item)}
-                    style={{
-                      width: 32, height: 32, borderRadius: 16, backgroundColor: '#fff',
-                      borderWidth: 1, borderColor: '#ddd', justifyContent: 'center', alignItems: 'center'
-                    }}
+                    style={styles.infoButton}
                   >
-                    <Text style={{ fontSize: 16, color: '#ff7a00', fontWeight: 'bold' }}>i</Text>
+                    <Text style={styles.infoButtonText}>i</Text>
                   </TouchableOpacity>
                 </View>
               </View>
             )}
             ListEmptyComponent={
-              <View style={{ marginTop: 40, alignItems: 'center' }}>
+              <View style={styles.emptyContainer}>
                 <Text style={{ color: '#999', fontSize: 16 }}>ไม่พบข้อมูลที่ค้นหา</Text>
               </View>
             }
@@ -163,6 +164,106 @@ export default function SearchScreen({ onBack, onGoHome, onGoSOS, onGoSearch, on
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  safeArea: {
+    flex: 1,
+  },
+  headerContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 10, // เพิ่มระยะห่างจากขอบบน
+  },
+  backButton: {
+    paddingVertical: 5,
+  },
+  searchInput: {
+    borderWidth: 1,
+    borderColor: '#eee',
+    borderRadius: 15,
+    padding: 15,
+    marginVertical: 10,
+    fontSize: 16,
+    backgroundColor: '#fcfcfc',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  categoryWrapper: {
+    marginBottom: 10,
+  },
+  categoryContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  categoryButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    margin: 4,
+    borderRadius: 20,
+  },
+  categoryText: {
+    fontSize: 14,
+  },
+  listContent: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 110, // เว้นระยะให้ไม่โดน Footer บัง
+  },
+  card: {
+    backgroundColor: '#fff',
+    padding: 18,
+    borderRadius: 20,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
+    // เพิ่มเงาให้ดูสวยงามและมีมิติ
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  cardTitle: {
+    fontSize: 17,
+    fontWeight: 'bold',
+    flex: 1,
+    color: '#333',
+  },
+  distanceText: {
+    color: '#ff7a00',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  cardAddress: {
+    color: '#777',
+    fontSize: 14,
+    flex: 1,
+    marginRight: 10,
+    lineHeight: 20,
+  },
+  infoButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#eee',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  infoButtonText: {
+    fontSize: 16,
+    color: '#ff7a00',
+    fontWeight: 'bold',
+  },
+  emptyContainer: {
+    marginTop: 60,
+    alignItems: 'center',
+  },
   footer: {
     position: 'absolute',
     bottom: 0,
@@ -170,12 +271,29 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     alignItems: 'center',
     width: '100%',
-    height: 85,
+    height: 90, // ปรับความสูง Footer ให้พอดี
     backgroundColor: '#FFF',
     borderTopWidth: 1,
     borderTopColor: '#F0F0F0',
-    paddingBottom: 20
+    paddingBottom: 25, // ดันไอคอนขึ้นเพื่อหลบขอบล่างของ iPhone
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 10,
   },
-  footerButton: { padding: 10, flex: 1, alignItems: 'center' },
-  footerIcon: { width: 26, height: 26 }
+  footerButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  footerIcon: {
+    width: 26,
+    height: 26,
+    resizeMode: 'contain',
+  },
+  header: { padding: 10 },
+  brandText: { fontSize: 22, fontWeight: 'bold' },
+  titleText: { fontSize: 15, color: '#666' },
+  
 });
