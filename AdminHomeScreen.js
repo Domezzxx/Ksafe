@@ -11,13 +11,11 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 // ── รายการบริการ (Hardcode จาก assets) ──
 const SERVICE_LIST = [
   { key: 'jrajon', label: 'กรมทางหลวงชนบท', image: require('./assets/jrajon.png'), accent: '#3B82F6' },
-  { key: 'police', label: 'สายด่วนตำรวจ', image: require('./assets/rp.png'), accent: '#6366F1' },
+  { key: 'police', label: 'สายด่วนตำรวจ', image: require('./assets/police.png'), accent: '#6366F1' },
   { key: 'fire', label: 'เพลิงไหม้', image: require('./assets/fire.png'), accent: '#EF4444' },
   { key: 'electric', label: 'การไฟฟ้า', image: require('./assets/phifa.png'), accent: '#F59E0B' },
   { key: 'rescue', label: 'สายด่วนกู้ภัย', image: require('./assets/rs.png'), accent: '#10B981' },
 ];
-
-const FOOTER_TAB_HEIGHT = 45;
 
 // ── ฟังก์ชันคำนวณระยะทาง ──
 const getDistanceFromLatLonInKm = (lat1, lon1, lat2, lon2) => {
@@ -32,7 +30,7 @@ const getDistanceFromLatLonInKm = (lat1, lon1, lat2, lon2) => {
   return R * c;
 };
 
-// ── ฟังก์ชันคำนวณ severity แบบเดียวกับ IncidentSortingScreen ──
+// ── ฟังก์ชันคำนวณ severity ──
 const computeSeverity = (rawData) => {
   const radiusKm = 1.0;
   return rawData.map((item, _, arr) => {
@@ -55,28 +53,24 @@ const computeSeverity = (rawData) => {
   });
 };
 
-// ── ✅ แปลง createdAt ให้เป็น Date รองรับทุก format ──
+// ── แปลง createdAt ให้เป็น Date ──
 const parseDate = (createdAt) => {
   if (!createdAt) return null;
-  // Firestore Timestamp (มี .toDate())
   if (typeof createdAt.toDate === 'function') return createdAt.toDate();
-  // Unix timestamp (number) — วินาที หรือ มิลลิวินาที
   if (typeof createdAt === 'number') {
     return new Date(createdAt > 1e10 ? createdAt : createdAt * 1000);
   }
-  // ISO string หรือ string อื่น ๆ
   if (typeof createdAt === 'string') {
     const d = new Date(createdAt);
     return isNaN(d.getTime()) ? null : d;
   }
-  // Firestore Timestamp object ที่ยังไม่ถูก deserialize (มี seconds field)
   if (createdAt.seconds !== undefined) {
     return new Date(createdAt.seconds * 1000);
   }
   return null;
 };
 
-// ── ✅ คำนวณ startOfToday เวลาท้องถิ่น ──
+// ── คำนวณ startOfToday ──
 const getStartOfToday = () => {
   const now = new Date();
   now.setHours(0, 0, 0, 0);
@@ -85,22 +79,20 @@ const getStartOfToday = () => {
 
 const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile, onGoToSorting }) => {
   const insets = useSafeAreaInsets();
-  const FOOTER_HEIGHT = FOOTER_TAB_HEIGHT + insets.bottom;
 
   const [incidents, setIncidents] = useState([]);
-  const [incidentLoading, setIncidentLoading] = useState(true);   // ✅ แยก loading ออกจาก statsLoading
+  const [incidentLoading, setIncidentLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(true);
-  const [todayIncidents, setTodayIncidents] = useState(0);         // ✅ state แยกสำหรับยอดเหตุฉุกเฉินวันนี้
+  const [todayIncidents, setTodayIncidents] = useState(0);
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalFacilities: 0,
   });
 
-  // ── ✅ Realtime listener: incidents + นับเฉพาะวันนี้ (รีเซตเองทุก 00:00 อัตโนมัติ) ──
   useEffect(() => {
     const q = query(collection(db, 'incident_reports'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const startOfToday = getStartOfToday(); // คำนวณใหม่ทุกครั้งที่ snapshot มา
+      const startOfToday = getStartOfToday();
 
       const rawData = snapshot.docs.map(doc => {
         const data = doc.data();
@@ -121,14 +113,13 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
 
       const processed = computeSeverity(rawData);
 
-      // ✅ นับเฉพาะ incident ที่ createdAt >= 00:00:00 วันนี้
       const todayCount = processed.filter(item => {
         const d = parseDate(item.timestamp);
         return d !== null && d >= startOfToday;
       }).length;
 
       setIncidents(processed);
-      setTodayIncidents(todayCount);   // ✅ update ทันทีไม่ต้องรอ statsLoading
+      setTodayIncidents(todayCount);
       setIncidentLoading(false);
     }, (error) => {
       console.error('Firebase incident_reports error:', error);
@@ -137,7 +128,6 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
     return () => unsubscribe();
   }, []);
 
-  // ── ✅ ดึงจำนวน users และ facilities ครั้งเดียว ──
   useEffect(() => {
     const fetchCounts = async () => {
       try {
@@ -180,7 +170,7 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
       <StatusBar barStyle="dark-content" backgroundColor="#F8F7F4" />
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: FOOTER_HEIGHT + 16 }}
+        contentContainerStyle={{ paddingBottom: 100 }}
       >
 
         {/* ── Header ── */}
@@ -291,7 +281,6 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
                 })}
               </MapView>
 
-              {/* Legend + ปุ่มดูทั้งหมด */}
               <View style={styles.mapOverlay}>
                 <View style={styles.legendRow}>
                   {[
@@ -346,11 +335,19 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
       </ScrollView>
 
       {/* ── Footer ── */}
-      <View style={[styles.footer, { height: FOOTER_HEIGHT, paddingBottom: insets.bottom }]}>
-        <FooterTab icon={require('./assets/home (2).png')} active onPress={onGoHome} />
-        <FooterTab icon={require('./assets/emergency (1).png')} onPress={onGoSOS} />
-        <FooterTab icon={require('./assets/map (1).png')} onPress={onGoSearch} />
-        <FooterTab icon={require('./assets/user.png')} onPress={onGoProfile} />
+      <View style={styles.footer}>
+        <TouchableOpacity style={styles.footerButton} onPress={onGoHome}>
+          <Image source={require('./assets/home (2).png')} style={[styles.footerIcon, { tintColor: '#F87C47' }]} />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.footerButton} onPress={onGoSOS}>
+          <Image source={require('./assets/emergency (1).png')} style={[styles.footerIcon, { tintColor: '#929292' }]} />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.footerButton} onPress={onGoSearch}>
+          <Image source={require('./assets/map (1).png')} style={[styles.footerIcon, { tintColor: '#929292' }]} />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.footerButton} onPress={onGoProfile}>
+          <Image source={require('./assets/user.png')} style={[styles.footerIcon, { tintColor: '#929292' }]} />
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
@@ -377,13 +374,6 @@ const ServiceRow = ({ name, count, image, accent, maxCount, isLast }) => {
     </View>
   );
 };
-
-const FooterTab = ({ icon, active, onPress }) => (
-  <TouchableOpacity style={styles.fBtn} onPress={onPress} activeOpacity={0.7}>
-    {active && <View style={styles.fActiveDot} />}
-    <Image source={icon} style={[styles.fIcon, { tintColor: active ? '#FF5A3C' : '#C4C4C4' }]} />
-  </TouchableOpacity>
-);
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8F7F4' },
@@ -421,12 +411,6 @@ const styles = StyleSheet.create({
   cardIcon: { fontSize: 20, marginBottom: 10 },
   cardNum: { fontSize: 30, fontWeight: '800', color: '#FFF', letterSpacing: -1 },
   cardLabel: { fontSize: 11, color: 'rgba(255,255,255,0.75)', marginTop: 3, fontWeight: '500' },
-  cardPill: {
-    marginTop: 12, alignSelf: 'flex-start',
-    backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 20,
-    paddingHorizontal: 10, paddingVertical: 3,
-  },
-  cardPillText: { fontSize: 10, color: '#FFF', fontWeight: '600' },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, marginBottom: 12 },
   sectionAccent: { width: 4, height: 18, backgroundColor: '#FF5A3C', borderRadius: 2, marginRight: 8 },
   sectionTitle: { fontSize: 15, fontWeight: '700', color: '#1F2937' },
@@ -510,17 +494,14 @@ const styles = StyleSheet.create({
   serviceCount: { fontSize: 14, fontWeight: '700', marginLeft: 8 },
   barTrack: { height: 4, backgroundColor: '#F3F4F6', borderRadius: 2, overflow: 'hidden' },
   barFill: { height: 4, borderRadius: 2 },
-  footer: { position: 'absolute', bottom: 14, flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', width: '100%', height: 80, backgroundColor: '#FFF', borderTopWidth: 1, borderTopColor: '#F0F0F0', paddingBottom: 15 },
+  footer: { 
+    position: 'absolute', bottom: 0, flexDirection: 'row', 
+    justifyContent: 'space-around', alignItems: 'center', 
+    width: '100%', height: 80, backgroundColor: '#FFF', 
+    borderTopWidth: 1, borderTopColor: '#F0F0F0', paddingBottom: 15 
+  },
   footerButton: { padding: 10, flex: 1, alignItems: 'center' },
   footerIcon: { width: 25, height: 25 },
- 
-  fBtn: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  fActiveDot: {
-    position: 'absolute', top: 1,
-    width: 2, height: 2, borderRadius: 2,
-    backgroundColor: '#FF5A3C',
-  },
-  fIcon: { width: 25, height: 25},
 });
 
 export default AdminHomeScreen;
