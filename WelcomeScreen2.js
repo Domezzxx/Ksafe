@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native';
+import { Ionicons } from '@expo/vector-icons'; // ✅ เพิ่ม import นี้
 
 const WelcomeScreen2 = ({ onNext, onBack }) => {
   return (
@@ -19,22 +20,12 @@ const WelcomeScreen2 = ({ onNext, onBack }) => {
       </View>
 
       <View style={styles.bottomContainer}>
-        {/* ปุ่มกลับ */}
         <TouchableOpacity style={styles.arrowButton} onPress={onBack}>
-          {/* 💡 รูปภาพลูกศรชี้ซ้าย */}
-          <Image 
-            source={require('./assets/j.jpg')} 
-            style={styles.iconImage} 
-          />
+          <Ionicons name="arrow-back" size={28} color="#ff7843" />
         </TouchableOpacity>
 
-        {/* ปุ่มถัดไป */}
         <TouchableOpacity style={styles.arrowButton} onPress={onNext}>
-          {/* 💡 รูปภาพลูกศรชี้ขวา */}
-          <Image 
-            source={require('./assets/t.jpg')} 
-            style={styles.iconImage} 
-          />
+          <Ionicons name="arrow-forward" size={28} color="#ff7843" />
         </TouchableOpacity>
       </View>
 
@@ -58,21 +49,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: 30,
-    paddingBottom: 30, 
+    paddingBottom: 30,
   },
   arrowButton: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#f3ece5',
+    backgroundColor: '#fff0eb',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#ff7843',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 3,
   },
-  iconImage: {
-    width: 25,
-    height: 25,
-    resizeMode: 'contain',
-  }
 });
 
 export default WelcomeScreen2;
