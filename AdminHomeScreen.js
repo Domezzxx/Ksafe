@@ -10,11 +10,11 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 // ── รายการบริการ (Hardcode จาก assets) ──
 const SERVICE_LIST = [
-  { key: 'jrajon', label: 'กรมทางหลวงชนบท', image: require('./assets/jrajon.png'), accent: '#3B82F6' },
-  { key: 'police', label: 'สายด่วนตำรวจ', image: require('./assets/rp.png'), accent: '#6366F1' },
+  { key: 'jrajon', label: 'สายด่วนจราจร', image: require('./assets/jrajon.png'), accent: '#3B82F6' },
+  { key: 'police', label: 'สถานีตำรวจ', image: require('./assets/police.png'), accent: '#6366F1' },
   { key: 'fire', label: 'เพลิงไหม้', image: require('./assets/fire.png'), accent: '#EF4444' },
-  { key: 'electric', label: 'การไฟฟ้า', image: require('./assets/phifa.png'), accent: '#F59E0B' },
-  { key: 'rescue', label: 'สายด่วนกู้ภัย', image: require('./assets/rs.png'), accent: '#10B981' },
+  { key: 'electric', label: 'การไฟฟ้าส่วนภูมิภาค', image: require('./assets/phifa.png'), accent: '#F59E0B' },
+  { key: 'rescue', label: 'แพทย์ฉุกเฉิน', image: require('./assets/rp.png'), accent: '#10B981' },
 ];
 
 const FOOTER_TAB_HEIGHT = 45;
