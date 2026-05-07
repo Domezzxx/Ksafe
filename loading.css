@@ -1,0 +1,57 @@
+/* สไตล์พื้นฐานของแต่ละจุด - ปรับให้ดูนุ่มนวลขึ้น */
+.dot {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    animation: bounce 1.0s infinite ease-in-out;
+    /* เพิ่มเงาจางๆ ให้ดูมีมิติ */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+/* ไล่เฉดสีส้มตามรูปภาพที่คุณส่งมา */
+.dot:nth-child(1) {
+    background-color: #FF8D4D;
+    /* สีเริ่มต้นในรูป */
+    animation-delay: 0s;
+}
+
+.dot:nth-child(2) {
+    background-color: #FFA372;
+    /* สีส้มอ่อนลงเล็กน้อย */
+    animation-delay: 0.1s;
+}
+
+.dot:nth-child(3) {
+    background-color: #FA854A;
+    /* สีส้มกลาง */
+    animation-delay: 0.2s;
+}
+
+.dot:nth-child(4) {
+    background-color: #F87C47;
+    /* สีเข้มสุดในรูป */
+    animation-delay: 0.3s;
+}
+
+/* ปรับสีข้อความให้เข้ากับโทนอุ่น */
+.loading-text {
+    color: #5A3E2B;
+    /* สีน้ำตาลเข้มอมเทา เพื่อให้ดู Soft กว่าสีดำ */
+    font-size: 1.1rem;
+    font-weight: 500;
+    margin-top: 10px;
+}
+
+/* Animation เดิมที่ดูดีอยู่แล้ว */
+@keyframes bounce {
+
+    0%,
+    100% {
+        transform: translateY(0) scale(1);
+    }
+
+    50% {
+        transform: translateY(-25px) scale(1.1);
+        opacity: 0.9;
+    }
+}
