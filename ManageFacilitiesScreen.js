@@ -9,7 +9,7 @@ import { db } from './firebaseConfig';
 import * as ImagePicker from 'expo-image-picker';
 import { ChevronLeft, Edit3, Trash2, Plus, ChevronDown, Camera } from 'lucide-react-native';
 import MapView, { Marker } from 'react-native-maps';
-import {SafeAreaView} from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 
 const { width } = Dimensions.get('window');
@@ -34,7 +34,7 @@ export default function ManageFacilitiesScreen({ onGoHome, onGoSOS, onGoSearch, 
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [type, setType] = useState('โรงพยาบาล');
-  const [image, setImage] = useState(null); 
+  const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
   const [region, setRegion] = useState(INITIAL_REGION);
 
@@ -52,7 +52,7 @@ export default function ManageFacilitiesScreen({ onGoHome, onGoSOS, onGoSearch, 
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [16, 9],
-      quality: 0.2, // บีบอัดรูปเพื่อประหยัดพื้นที่ Firestore
+      quality: 0.2,
       base64: true,
     });
 
@@ -74,7 +74,7 @@ export default function ManageFacilitiesScreen({ onGoHome, onGoSOS, onGoSearch, 
         ที่อยู่: address,
         ประเภท: type,
         พิกัด: new GeoPoint(region.latitude, region.longitude),
-        รูปภาพ: image, 
+        รูปภาพ: image,
       };
 
       if (editId) {
@@ -90,6 +90,29 @@ export default function ManageFacilitiesScreen({ onGoHome, onGoSOS, onGoSearch, 
     } finally {
       setLoading(false);
     }
+  };
+
+  // ✅ ฟังก์ชันลบข้อมูล (ย้ายมาไว้ที่นี่)
+  const handleDelete = async () => {
+    Alert.alert("ยืนยันการลบ", `คุณต้องการลบ "${name}" ใช่หรือไม่?`, [
+      { text: "ยกเลิก", style: "cancel" },
+      {
+        text: "ลบข้อมูล",
+        style: "destructive",
+        onPress: async () => {
+          setLoading(true);
+          try {
+            await deleteDoc(doc(db, "facilities", editId));
+            Alert.alert("สำเร็จ", "ลบข้อมูลเรียบร้อยแล้ว");
+            resetForm();
+          } catch (error) {
+            Alert.alert("ผิดพลาด", "ไม่สามารถลบข้อมูลได้");
+          } finally {
+            setLoading(false);
+          }
+        }
+      }
+    ]);
   };
 
   const resetForm = () => {
@@ -144,11 +167,11 @@ export default function ManageFacilitiesScreen({ onGoHome, onGoSOS, onGoSearch, 
         <SafeAreaView style={{ flex: 1 }}>
           {showDropdown && (
             <View style={styles.dropdownOverlay}>
-              <TouchableOpacity style={{flex:1}} onPress={()=>setShowDropdown(false)} />
+              <TouchableOpacity style={{ flex: 1 }} onPress={() => setShowDropdown(false)} />
               <View style={styles.dropdownMenu}>
-                <TouchableOpacity onPress={()=>{setSelectedCategory('ทั้งหมด'); setShowDropdown(false);}} style={styles.dropdownItem}><Text>ทั้งหมด</Text></TouchableOpacity>
+                <TouchableOpacity onPress={() => { setSelectedCategory('ทั้งหมด'); setShowDropdown(false); }} style={styles.dropdownItem}><Text>ทั้งหมด</Text></TouchableOpacity>
                 {categories.map(cat => (
-                  <TouchableOpacity key={cat} onPress={()=>{setSelectedCategory(cat); setShowDropdown(false);}} style={styles.dropdownItem}><Text>{cat}</Text></TouchableOpacity>
+                  <TouchableOpacity key={cat} onPress={() => { setSelectedCategory(cat); setShowDropdown(false); }} style={styles.dropdownItem}><Text>{cat}</Text></TouchableOpacity>
                 ))}
               </View>
             </View>
@@ -162,7 +185,7 @@ export default function ManageFacilitiesScreen({ onGoHome, onGoSOS, onGoSearch, 
                 {item.รูปภาพ ? (
                   <Image source={{ uri: item.รูปภาพ }} style={styles.cardImage} />
                 ) : (
-                  <View style={[styles.cardImage, {backgroundColor: '#F5F5F5', justifyContent: 'center', alignItems: 'center'}]}>
+                  <View style={[styles.cardImage, { backgroundColor: '#F5F5F5', justifyContent: 'center', alignItems: 'center' }]}>
                     <Camera size={20} color="#CCC" />
                   </View>
                 )}
@@ -171,13 +194,10 @@ export default function ManageFacilitiesScreen({ onGoHome, onGoSOS, onGoSearch, 
                   <Text style={styles.subText} numberOfLines={1}>📍 {item.ที่อยู่}</Text>
                 </View>
                 <View style={{ flexDirection: 'row', gap: 5 }}>
-                  <TouchableOpacity onPress={() => openEdit(item)} style={styles.editBtn}><Edit3 size={18} color="#F48E54" /></TouchableOpacity>
-                  <TouchableOpacity onPress={() => {
-                    Alert.alert("ลบข้อมูล", "ยืนยันการลบ?", [
-                      {text: "ยกเลิก"},
-                      {text: "ลบ", style:"destructive", onPress: async () => await deleteDoc(doc(db, "facilities", item.id))}
-                    ])
-                  }} style={[styles.editBtn, {backgroundColor: '#FFEBEB'}]}><Trash2 size={18} color="#FF4444" /></TouchableOpacity>
+                  {/* ✅ เหลือแค่ปุ่มแก้ไข */}
+                  <TouchableOpacity onPress={() => openEdit(item)} style={styles.editBtn}>
+                    <Edit3 size={18} color="#F48E54" />
+                  </TouchableOpacity>
                 </View>
               </View>
             )}
@@ -185,12 +205,11 @@ export default function ManageFacilitiesScreen({ onGoHome, onGoSOS, onGoSearch, 
           />
         </SafeAreaView>
 
-        {/* ✅ Footer นำกลับมาใส่ตรงนี้ */}
         <View style={styles.footer}>
-          <TouchableOpacity onPress={onGoHome}><Image source={require('./assets/home (2).png')} style={[styles.fIcon, {tintColor: '#D9D9D9'}]} /></TouchableOpacity>
-          <TouchableOpacity onPress={onGoSOS}><Image source={require('./assets/phone-call.png')} style={[styles.fIcon, {tintColor: '#D9D9D9'}]} /></TouchableOpacity>
-          <TouchableOpacity onPress={onGoSearch}><Image source={require('./assets/map (1).png')} style={[styles.fIcon, {tintColor: '#F48E54'}]} /></TouchableOpacity>
-          <TouchableOpacity onPress={onGoProfile}><Image source={require('./assets/user.png')} style={[styles.fIcon, {tintColor: '#D9D9D9'}]} /></TouchableOpacity>
+          <TouchableOpacity onPress={onGoHome}><Image source={require('./assets/home (2).png')} style={[styles.fIcon, { tintColor: '#D9D9D9' }]} /></TouchableOpacity>
+          <TouchableOpacity onPress={onGoSOS}><Image source={require('./assets/phone-call.png')} style={[styles.fIcon, { tintColor: '#D9D9D9' }]} /></TouchableOpacity>
+          <TouchableOpacity onPress={onGoSearch}><Image source={require('./assets/map (1).png')} style={[styles.fIcon, { tintColor: '#F48E54' }]} /></TouchableOpacity>
+          <TouchableOpacity onPress={onGoProfile}><Image source={require('./assets/user.png')} style={[styles.fIcon, { tintColor: '#D9D9D9' }]} /></TouchableOpacity>
         </View>
       </View>
     );
@@ -205,7 +224,7 @@ export default function ManageFacilitiesScreen({ onGoHome, onGoSOS, onGoSearch, 
           <Text style={styles.formTitle}>{editId ? 'แก้ไขข้อมูล' : 'เพิ่มข้อมูลใหม่'}</Text>
         </View>
         <ScrollView style={styles.formContent} keyboardShouldPersistTaps="handled">
-          
+
           <Text style={styles.label}>รูปภาพสถานที่</Text>
           <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
             {image ? (
@@ -213,32 +232,32 @@ export default function ManageFacilitiesScreen({ onGoHome, onGoSOS, onGoSearch, 
             ) : (
               <View style={styles.imagePlaceholder}>
                 <Camera size={40} color="#CCC" />
-                <Text style={{color: '#999'}}>คลิกเพื่อเลือกรูปภาพ</Text>
+                <Text style={{ color: '#999' }}>คลิกเพื่อเลือกรูปภาพ</Text>
               </View>
             )}
           </TouchableOpacity>
 
           <Text style={styles.label}>ปักหมุดบนแผนที่</Text>
           <View style={styles.mapContainer}>
-            <MapView style={styles.map} region={region} onPress={(e) => setRegion({...region, ...e.nativeEvent.coordinate})}>
-              <Marker coordinate={region} draggable onDragEnd={(e) => setRegion({...region, ...e.nativeEvent.coordinate})} />
+            <MapView style={styles.map} region={region} onPress={(e) => setRegion({ ...region, ...e.nativeEvent.coordinate })}>
+              <Marker coordinate={region} draggable onDragEnd={(e) => setRegion({ ...region, ...e.nativeEvent.coordinate })} />
             </MapView>
           </View>
-          
+
           <Text style={styles.label}>ชื่อสถานที่</Text>
           <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="ระบุชื่อหน่วยงาน" />
-          
+
           <Text style={styles.label}>เบอร์โทรติดต่อ</Text>
           <TextInput style={styles.input} value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
-          
+
           <Text style={styles.label}>ที่อยู่</Text>
-          <TextInput style={[styles.input, {height: 60}]} value={address} onChangeText={setAddress} multiline />
+          <TextInput style={[styles.input, { height: 60 }]} value={address} onChangeText={setAddress} multiline />
 
           <Text style={styles.label}>ประเภทบริการ</Text>
           <View style={styles.typeRow}>
             {categories.map(cat => (
               <TouchableOpacity key={cat} onPress={() => setType(cat)} style={[styles.typeTab, type === cat && styles.typeTabActive]}>
-                <Text style={{color: type === cat ? '#F48E54' : '#666'}}>{cat}</Text>
+                <Text style={{ color: type === cat ? '#F48E54' : '#666' }}>{cat}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -246,7 +265,20 @@ export default function ManageFacilitiesScreen({ onGoHome, onGoSOS, onGoSearch, 
           <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={loading}>
             {loading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.saveBtnText}>บันทึกข้อมูล</Text>}
           </TouchableOpacity>
-          <View style={{height: 50}} />
+
+          {/* ✅ เพิ่มปุ่มลบ เฉพาะกรณีที่เป็นการแก้ไขข้อมูลเดิม */}
+          {editId && (
+            <TouchableOpacity 
+              style={styles.deleteBtn} 
+              onPress={handleDelete} 
+              disabled={loading}
+            >
+              <Trash2 size={20} color="#FF4444" />
+              <Text style={styles.deleteBtnText}>ลบสถานที่นี้</Text>
+            </TouchableOpacity>
+          )}
+          
+          <View style={{ height: 50 }} />
         </ScrollView>
       </SafeAreaView>
     </KeyboardAvoidingView>
@@ -271,7 +303,7 @@ const styles = StyleSheet.create({
   cardImage: { width: 60, height: 60, borderRadius: 10 },
   facilityName: { fontWeight: 'bold', fontSize: 16 },
   subText: { color: '#888', fontSize: 13, marginTop: 4 },
-  editBtn: { padding: 10, backgroundColor: '#FFF2EB', borderRadius: 10 },
+  editBtn: { padding: 12, backgroundColor: '#FFF2EB', borderRadius: 12 },
   formHeader: { flexDirection: 'row', alignItems: 'center', padding: 20 },
   formTitle: { fontSize: 20, fontWeight: 'bold', marginLeft: 10 },
   formContent: { paddingHorizontal: 20 },
@@ -287,9 +319,20 @@ const styles = StyleSheet.create({
   typeTabActive: { borderColor: '#F48E54', backgroundColor: '#FFF2EB' },
   saveBtn: { backgroundColor: '#F48E54', padding: 18, borderRadius: 15, marginTop: 30, alignItems: 'center' },
   saveBtnText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
+  // ✅ สไตล์สำหรับปุ่มลบในหน้าฟอร์ม
+  deleteBtn: { 
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 15, 
+    borderRadius: 15, 
+    marginTop: 15, 
+    borderWidth: 1,
+    borderColor: '#FFEBEB',
+    backgroundColor: '#FFF5F5'
+  },
+  deleteBtnText: { color: '#FF4444', fontWeight: 'bold', marginLeft: 8 },
   footer: { position: 'absolute', bottom: 0, flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', width: '100%', height: 80, backgroundColor: '#FFF', borderTopWidth: 1, borderTopColor: '#F0F0F0', paddingBottom: 15 },
-  footerButton: { padding: 10, flex: 1, alignItems: 'center' },
-  footerIcon: { width: 25, height: 25 },
- fIcon: { width: 24, height: 24 }
-  
+  fIcon: { width: 24, height: 24 }
+
 });
