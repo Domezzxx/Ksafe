@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  Image, ActivityIndicator, StatusBar
+  Image, ActivityIndicator, StatusBar, Modal, FlatList
 } from 'react-native';
 import MapView, { Marker, Circle, Callout, PROVIDER_GOOGLE } from 'react-native-maps';
 import { db } from './firebaseConfig';
 import { collection, onSnapshot, query, getCountFromServer } from 'firebase/firestore';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ChevronDown } from 'lucide-react-native'; // อย่าลืมลงไลบรารีนี้ หรือเปลี่ยนเป็น Image แทนได้ครับ
 
 // ── รายการบริการ (Hardcode จาก assets) ──
 const SERVICE_LIST = [
@@ -15,6 +16,13 @@ const SERVICE_LIST = [
   { key: 'fire', label: 'เพลิงไหม้', image: require('./assets/fire.png'), accent: '#EF4444' },
   { key: 'electric', label: 'การไฟฟ้าส่วนภูมิภาค', image: require('./assets/phifa.png'), accent: '#F59E0B' },
   { key: 'rescue', label: 'แพทย์ฉุกเฉิน', image: require('./assets/rp.png'), accent: '#10B981' },
+];
+
+const MONTHS = [
+  { label: 'มกราคม', value: 0 }, { label: 'กุมภาพันธ์', value: 1 }, { label: 'มีนาคม', value: 2 },
+  { label: 'เมษายน', value: 3 }, { label: 'พฤษภาคม', value: 4 }, { label: 'มิถุนายน', value: 5 },
+  { label: 'กรกฎาคม', value: 6 }, { label: 'สิงหาคม', value: 7 }, { label: 'กันยายน', value: 8 },
+  { label: 'ตุลาคม', value: 9 }, { label: 'พฤศจิกายน', value: 10 }, { label: 'ธันวาคม', value: 11 },
 ];
 
 const FOOTER_TAB_HEIGHT = 45;
@@ -58,18 +66,14 @@ const computeSeverity = (rawData) => {
 // ── ✅ แปลง createdAt ให้เป็น Date รองรับทุก format ──
 const parseDate = (createdAt) => {
   if (!createdAt) return null;
-  // Firestore Timestamp (มี .toDate())
   if (typeof createdAt.toDate === 'function') return createdAt.toDate();
-  // Unix timestamp (number) — วินาที หรือ มิลลิวินาที
   if (typeof createdAt === 'number') {
     return new Date(createdAt > 1e10 ? createdAt : createdAt * 1000);
   }
-  // ISO string หรือ string อื่น ๆ
   if (typeof createdAt === 'string') {
     const d = new Date(createdAt);
     return isNaN(d.getTime()) ? null : d;
   }
-  // Firestore Timestamp object ที่ยังไม่ถูก deserialize (มี seconds field)
   if (createdAt.seconds !== undefined) {
     return new Date(createdAt.seconds * 1000);
   }
@@ -88,19 +92,23 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
   const FOOTER_HEIGHT = FOOTER_TAB_HEIGHT + insets.bottom;
 
   const [incidents, setIncidents] = useState([]);
-  const [incidentLoading, setIncidentLoading] = useState(true);   // ✅ แยก loading ออกจาก statsLoading
+  const [incidentLoading, setIncidentLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(true);
-  const [todayIncidents, setTodayIncidents] = useState(0);         // ✅ state แยกสำหรับยอดเหตุฉุกเฉินวันนี้
+  const [todayIncidents, setTodayIncidents] = useState(0);
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalFacilities: 0,
   });
 
-  // ── ✅ Realtime listener: incidents + นับเฉพาะวันนี้ (รีเซตเองทุก 00:00 อัตโนมัติ) ──
+  // ✅ State สำหรับ Dropdown เลือกเดือน
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  // ── ✅ Realtime listener: incidents + นับเฉพาะวันนี้ ──
   useEffect(() => {
     const q = query(collection(db, 'incident_reports'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const startOfToday = getStartOfToday(); // คำนวณใหม่ทุกครั้งที่ snapshot มา
+      const startOfToday = getStartOfToday();
 
       const rawData = snapshot.docs.map(doc => {
         const data = doc.data();
@@ -116,19 +124,19 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
           lat,
           lng,
           hasCoords: !isNaN(lat) && !isNaN(lng),
+          parsedDate: parseDate(data.timestamp) // เก็บไว้ใช้ filter เดือน
         };
       });
 
       const processed = computeSeverity(rawData);
 
-      // ✅ นับเฉพาะ incident ที่ createdAt >= 00:00:00 วันนี้
       const todayCount = processed.filter(item => {
-        const d = parseDate(item.timestamp);
+        const d = item.parsedDate;
         return d !== null && d >= startOfToday;
       }).length;
 
       setIncidents(processed);
-      setTodayIncidents(todayCount);   // ✅ update ทันทีไม่ต้องรอ statsLoading
+      setTodayIncidents(todayCount);
       setIncidentLoading(false);
     }, (error) => {
       console.error('Firebase incident_reports error:', error);
@@ -158,6 +166,25 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
     fetchCounts();
   }, []);
 
+  // ── ✅ Logic กรองข้อมูลรายเดือน (สำหรับส่วน Service Summary) ──
+  const monthlyFilteredCounts = useMemo(() => {
+    const counts = {};
+    incidents.forEach(item => {
+      if (item.parsedDate && item.parsedDate.getMonth() === selectedMonth) {
+        const name = item.service_name;
+        if (name) {
+          counts[name] = (counts[name] || 0) + 1;
+        }
+      }
+    });
+    return counts;
+  }, [incidents, selectedMonth]);
+
+  const currentMaxCount = useMemo(() => {
+    const values = Object.values(monthlyFilteredCounts);
+    return values.length > 0 ? Math.max(...values) : 1;
+  }, [monthlyFilteredCounts]);
+
   const getStyle = (sev) => {
     switch (sev) {
       case 'high': return { color: 'rgba(239,68,68,0.35)', solid: '#EF4444', label: 'เสี่ยงสูง' };
@@ -165,15 +192,6 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
       default: return { color: 'rgba(250,204,21,0.35)', solid: '#FACC15', label: 'เฝ้าระวัง' };
     }
   };
-
-  const serviceCounts = incidents.reduce((acc, item) => {
-    const name = item.service_name;
-    if (!name) return acc;
-    acc[name] = (acc[name] || 0) + 1;
-    return acc;
-  }, {});
-
-  const maxCount = Math.max(...SERVICE_LIST.map(s => serviceCounts[s.label] || 0), 1);
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
@@ -279,7 +297,6 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
                             </Text>
                             <TouchableOpacity
                               style={[styles.goBtn, { backgroundColor: config.solid }]}
-                              onPress={() => onGoToSorting && onGoToSorting(item.severity)}
                             >
                               <Text style={styles.goBtnText}>ดูรายการ →</Text>
                             </TouchableOpacity>
@@ -324,9 +341,21 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
         </View>
 
         {/* ── Service Summary ── */}
-        <View style={styles.sectionHeader}>
-          <View style={styles.sectionAccent} />
-          <Text style={styles.sectionTitle}>สรุปรายงานการโทรประจำเดือน</Text>
+        <View style={[styles.sectionHeader, { justifyContent: 'space-between' }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={styles.sectionAccent} />
+            <Text style={styles.sectionTitle}>สรุปรายงานการโทรประจำเดือน</Text>
+          </View>
+
+          {/* ✅ ปุ่ม Dropdown เลือกเดือน */}
+          <TouchableOpacity 
+            style={styles.dropdownButton} 
+            onPress={() => setShowDropdown(true)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.dropdownButtonText}>{MONTHS[selectedMonth].label}</Text>
+            <ChevronDown size={14} color="#6B7280" style={{marginLeft: 4}} />
+          </TouchableOpacity>
         </View>
 
         <View style={styles.serviceListWrapper}>
@@ -334,16 +363,46 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
             <ServiceRow
               key={service.key}
               name={service.label}
-              count={serviceCounts[service.label] || 0}
+              count={monthlyFilteredCounts[service.label] || 0} // กรองตามเดือนที่เลือก
               image={service.image}
               accent={service.accent}
-              maxCount={maxCount}
+              maxCount={currentMaxCount}
               isLast={index === SERVICE_LIST.length - 1}
             />
           ))}
         </View>
 
       </ScrollView>
+
+      {/* ✅ Modal สำหรับ Dropdown เดือน */}
+      <Modal visible={showDropdown} transparent animationType="fade">
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setShowDropdown(false)}
+        >
+          <View style={styles.dropdownList}>
+            <Text style={styles.modalTitle}>เลือกเดือนที่ต้องการดู</Text>
+            <FlatList
+              data={MONTHS}
+              keyExtractor={(item) => item.value.toString()}
+              renderItem={({ item }) => (
+                <TouchableOpacity 
+                  style={[styles.dropdownItem, selectedMonth === item.value && { backgroundColor: '#FFF0ED' }]}
+                  onPress={() => {
+                    setSelectedMonth(item.value);
+                    setShowDropdown(false);
+                  }}
+                >
+                  <Text style={[styles.dropdownItemText, selectedMonth === item.value && { color: '#FF5A3C', fontWeight: '700' }]}>
+                    {item.label}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* ── Footer ── */}
       <View style={styles.footer}>
@@ -377,8 +436,6 @@ const ServiceRow = ({ name, count, image, accent, maxCount, isLast }) => {
     </View>
   );
 };
-
-
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8F7F4' },
@@ -416,12 +473,6 @@ const styles = StyleSheet.create({
   cardIcon: { fontSize: 20, marginBottom: 10 },
   cardNum: { fontSize: 30, fontWeight: '800', color: '#FFF', letterSpacing: -1 },
   cardLabel: { fontSize: 11, color: 'rgba(255,255,255,0.75)', marginTop: 3, fontWeight: '500' },
-  cardPill: {
-    marginTop: 12, alignSelf: 'flex-start',
-    backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 20,
-    paddingHorizontal: 10, paddingVertical: 3,
-  },
-  cardPillText: { fontSize: 10, color: '#FFF', fontWeight: '600' },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, marginBottom: 12 },
   sectionAccent: { width: 4, height: 18, backgroundColor: '#FF5A3C', borderRadius: 2, marginRight: 8 },
   sectionTitle: { fontSize: 15, fontWeight: '700', color: '#1F2937' },
@@ -508,8 +559,41 @@ const styles = StyleSheet.create({
   footer: { position: 'absolute', bottom: 0, flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', width: '100%', height: 80, backgroundColor: '#FFF', borderTopWidth: 1, borderTopColor: '#F0F0F0', paddingBottom: 15 },
   footerButton: { padding: 10, flex: 1, alignItems: 'center' },
   footerIcon: { width: 25, height: 25 },
- 
 
+  // ✅ สไตล์สำหรับ Dropdown ที่เพิ่มเข้ามา
+  dropdownButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  dropdownButtonText: { fontSize: 12, fontWeight: '600', color: '#374151' },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dropdownList: {
+    width: '80%',
+    backgroundColor: '#FFF',
+    borderRadius: 24,
+    maxHeight: '60%',
+    padding: 16,
+    elevation: 10,
+  },
+  modalTitle: { fontSize: 16, fontWeight: '800', color: '#111', marginBottom: 15, textAlign: 'center' },
+  dropdownItem: {
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    marginBottom: 4,
+  },
+  dropdownItemText: { fontSize: 15, color: '#4B5563' },
 });
 
 export default AdminHomeScreen;
