@@ -248,7 +248,7 @@ export default function ManageContactScreen({
       <SafeAreaView style={{ flex: 1 }}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
           <TouchableOpacity onPress={resetForm} style={styles.backHeader}>
-            <Text style={styles.backText}>← {editId ? 'แก้ไขข้อมูลหน่วยงาน' : 'เพิ่มหน่วยงานใหม่'}</Text>
+            <Text style={styles.backText}>← {editId ? 'แก้ไขข้อมูล' : 'เพิ่มหน่วยงานใหม่'}</Text>
           </TouchableOpacity>
           <View style={styles.formArea}>
             <View style={styles.inputGroup}>
@@ -357,7 +357,7 @@ const styles = StyleSheet.create({
   radioText: { fontSize: 14, fontWeight: '600' },
   
   backHeader: { marginHorizontal: 25, marginTop: 20, marginBottom: 25 },
-  backText: { fontSize: 20, color: '#F48E54', fontWeight: 'bold' },
+  backText: { fontSize: 20, color: '#0f0f0f', fontWeight: 'bold' },
   formArea: { paddingHorizontal: 25 },
   inputGroup: { marginBottom: 20 },
   label: { fontSize: 15, fontWeight: 'bold', color: '#374151', marginBottom: 10 },
