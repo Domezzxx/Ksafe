@@ -231,7 +231,7 @@ export default function ManageContactScreen({
         {/* Footer Navigation */}
         <View style={styles.footer}>
           <TouchableOpacity style={styles.footerButton} onPress={onGoHome}><Image source={require('./assets/home (2).png')} style={[styles.footerIcon, { tintColor: '#D9D9D9' }]} /></TouchableOpacity>
-          <TouchableOpacity style={styles.footerButton} onPress={onGoSOS}><Image source={require('./assets/emergency (1).png')} style={[styles.footerIcon, { tintColor: '#F87C47' }]} /></TouchableOpacity>
+          <TouchableOpacity style={styles.footerButton} onPress={onGoSOS}><Image source={require('./assets/phone-call.png')} style={[styles.footerIcon, { tintColor: '#F87C47' }]} /></TouchableOpacity>
           <TouchableOpacity style={styles.footerButton} onPress={onGoSearch}><Image source={require('./assets/map (1).png')} style={[styles.footerIcon, { tintColor: '#D9D9D9' }]} /></TouchableOpacity>
           <TouchableOpacity style={styles.footerButton} onPress={onGoProfile}><Image source={require('./assets/user.png')} style={[styles.footerIcon, { tintColor: '#D9D9D9' }]} /></TouchableOpacity>
         </View>
@@ -353,7 +353,7 @@ const styles = StyleSheet.create({
   deleteLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 15, padding: 10 },
   cancelBtn: { marginTop: 5, alignItems: 'center', padding: 15 },
   
-  footer: { position: 'absolute', bottom: 15, flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', width: '100%', height: 80, backgroundColor: '#FFF', borderTopWidth: 1, borderTopColor: '#F0F0F0', paddingBottom: 15 },
+  footer: { position: 'absolute', bottom: 0, flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', width: '100%', height: 80, backgroundColor: '#FFF', borderTopWidth: 1, borderTopColor: '#F0F0F0', paddingBottom: 15 },
   footerButton: { padding: 10, flex: 1, alignItems: 'center' },
   footerIcon: { width: 25, height: 25 },
    header: { padding: 20 },
