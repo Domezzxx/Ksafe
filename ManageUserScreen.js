@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { collection, query, onSnapshot, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db } from './firebaseConfig';
-import { Edit2, Calendar } from 'lucide-react-native';
+import { Edit3, Calendar } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
@@ -146,18 +146,22 @@ export default function ManageUserScreen({ onGoHome, onGoSOS, onGoSearch, onGoPr
           <FlatList
             data={filteredUsers}
             keyExtractor={item => item.id}
-            contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }}
+            contentContainerStyle={{ paddingBottom: 100 }}
             renderItem={({ item }) => (
-              <View style={styles.userCard}>
-                <View style={styles.cardInfo}>
-                  <Text style={styles.userName}>{item.firstName} {item.lastName}</Text>
-                  <Text style={styles.userPhone}>{item.phone}</Text>
-                </View>
-                <TouchableOpacity style={styles.editIconBtn} onPress={() => openEdit(item)}>
-                  <Edit2 size={16} color="#000" />
-                </TouchableOpacity>
-              </View>
-            )}
+  <View style={styles.userCard}>
+    {/* จำลองรูป Profile ให้ขนาดเท่ากับรูปสถานที่ */}
+    <View style={styles.cardImagePlaceholder}>
+      <Text style={styles.avatarText}>{item.firstName?.charAt(0)}</Text>
+    </View>
+    <View style={styles.cardInfo}>
+      <Text style={styles.userName} numberOfLines={1}>{item.firstName} {item.lastName}</Text>
+      <Text style={styles.userPhone}>📞 {item.phone}</Text>
+    </View>
+    <TouchableOpacity style={styles.editBtn} onPress={() => openEdit(item)}>
+      <Edit3 size={18} color="#F48E54" />
+    </TouchableOpacity>
+  </View>
+)}
           />
         </SafeAreaView>
         {/* Footer Navigation */}
@@ -256,14 +260,30 @@ const styles = StyleSheet.create({
   titleText: { fontSize: 18, color: '#666' },
   searchBar: { paddingHorizontal: 20, marginBottom: 10 },
   searchInput: { backgroundColor: '#F5F5F5', padding: 12, borderRadius: 12 },
-  userCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F9FAFB', padding: 15, borderRadius: 12, marginBottom: 10, borderWidth: 1, borderColor: '#F3F4F6' },
-  cardInfo: { flex: 1 },
-  userName: { fontSize: 16, fontWeight: '600' },
-  userPhone: { color: '#F48E54', marginTop: 4, fontWeight: '500' },
-  editIconBtn: { padding: 8, backgroundColor: '#FFEDD5', borderRadius: 8 },
-  backBtn: { paddingHorizontal: 25, marginTop: 10 },
-  backArrow: { fontSize: 24, color: '#999' },
-  editTitle: { fontSize: 26, fontWeight: 'bold', marginTop: 10, marginBottom: 20 },
+  userCard: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: '#F9FAFB', 
+    marginHorizontal: 20, 
+    marginBottom: 10, 
+    padding: 15, 
+    borderRadius: 15, 
+    borderWidth: 1, 
+    borderColor: '#F0F0F0' 
+  },
+  cardImagePlaceholder: { 
+    width: 60, 
+    height: 60, 
+    borderRadius: 10, // ปรับเป็นเหลี่ยมมนเหมือนหน้า Facilities เพื่อให้ขนาดดูเท่ากันเป๊ะ
+    backgroundColor: '#FFF2EB', 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  avatarText: { fontSize: 22, fontWeight: 'bold', color: '#F48E54' },
+  cardInfo: { flex: 1, marginLeft: 10 },
+  userName: { fontSize: 16, fontWeight: 'bold', color: '#1F2937' },
+  userPhone: { color: '#666', marginTop: 4, fontSize: 13 },
+  editBtn: { padding: 12, backgroundColor: '#FFF2EB', borderRadius: 12 },
   formContainer: { backgroundColor: '#fff', borderRadius: 20, padding: 2, marginBottom: 20 },
   sectionLabel: { fontSize: 14, color: '#333', fontWeight: '600', marginTop: 15, marginBottom: 8 },
   row: { flexDirection: 'row', marginBottom: 10 },
