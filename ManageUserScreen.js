@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
   userCard: { 
     flexDirection: 'row', 
     alignItems: 'center', 
-    backgroundColor: '#F9FAFB', 
+    backgroundColor: '#F5F5F5', 
     marginHorizontal: 20, 
     marginBottom: 10, 
     padding: 15, 
