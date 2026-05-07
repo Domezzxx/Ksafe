@@ -185,8 +185,8 @@ export default function ManageFacilitiesScreen({ onGoHome, onGoSOS, onGoSearch, 
                 {item.รูปภาพ ? (
                   <Image source={{ uri: item.รูปภาพ }} style={styles.cardImage} />
                 ) : (
-                  <View style={[styles.cardImage, { backgroundColor: '#F9FAFB', justifyContent: 'center', alignItems: 'center' }]}>
-                    <Camera size={20} color="#F9FAFB" />
+                  <View style={[styles.cardImage, { backgroundColor: '#F5F5F5', justifyContent: 'center', alignItems: 'center' }]}>
+                    <Camera size={20} color="#F5F5F5" />
                   </View>
                 )}
                 <View style={{ flex: 1, marginLeft: 10 }}>
@@ -299,9 +299,9 @@ const styles = StyleSheet.create({
   dropdownItem: { padding: 15, borderBottomWidth: 1, borderBottomColor: '#F5F5F5' },
   addBtn: { backgroundColor: '#F48E54', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 15, borderRadius: 12 },
   addBtnText: { color: '#FFF', fontWeight: 'bold', marginLeft: 5 },
-  facilityCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F9FAFB', marginHorizontal: 20, marginBottom: 10, padding: 15, borderRadius: 15, borderWidth: 1, borderColor: '#F0F0F0' },
+  facilityCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F5F5F5', marginHorizontal: 20, marginBottom: 10, padding: 15, borderRadius: 15, borderWidth: 1, borderColor: '#F0F0F0' },
   cardImage: { width: 60, height: 60, borderRadius: 10 },
-  card: { backgroundColor: '#F9FAFB', marginBottom: 10, borderRadius: 15, borderWidth: 1, borderColor: '#F0F0F0', marginHorizontal: 20 },
+  card: { backgroundColor: '#F5F5F5', marginBottom: 10, borderRadius: 15, borderWidth: 1, borderColor: '#F0F0F0', marginHorizontal: 20 },
   cardInner: { flexDirection: 'row', alignItems: 'center', padding: 15 },
   facilityName: { fontWeight: 'bold', fontSize: 16 },
   subText: { color: '#888', fontSize: 13, marginTop: 4 },
