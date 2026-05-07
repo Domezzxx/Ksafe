@@ -206,25 +206,28 @@ export default function ManageContactScreen({
           <FlatList
             data={filteredData}
             keyExtractor={item => item.id}
-            contentContainerStyle={{ paddingBottom: 150, paddingHorizontal: 20 }}
+            contentContainerStyle={{ paddingBottom: 150 }}
             renderItem={({ item }) => (
-              <View style={styles.card}>
-                <View style={styles.cardInner}>
-                  <Image 
-                    source={item.image ? { uri: item.image } : require('./assets/user.png')} 
-                    style={styles.avatar} 
-                  />
-                  <View style={{ flex: 1, marginLeft: 15 }}>
-                    <Text style={styles.nameText} numberOfLines={1}>{item.title}</Text>
-                    <Text style={styles.phoneText}>{item.phone}</Text>
-                    <View style={styles.tag}><Text style={styles.tagText}>{item.category}</Text></View>
-                  </View>
-                  <TouchableOpacity style={styles.editBtnAction} onPress={() => openEdit(item)}>
-                    <Edit2 size={18} color="#F48E54" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
+  <View style={styles.facilityCard}>
+    {item.image ? (
+      <Image source={{ uri: item.image }} style={styles.cardImage} />
+    ) : (
+      <View style={[styles.cardImage, { backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center' }]}>
+        <Image source={require('./assets/user.png')} style={{ width: 24, height: 24, tintColor: '#CCC' }} />
+      </View>
+    )}
+    <View style={{ flex: 1, marginLeft: 10 }}>
+      <Text style={styles.facilityName} numberOfLines={1}>{item.title}</Text>
+      <Text style={styles.phoneText}>{item.phone}</Text>
+      <View style={styles.tag}><Text style={styles.tagText}>{item.category}</Text></View>
+    </View>
+    <View style={{ flexDirection: 'row', gap: 5 }}>
+      <TouchableOpacity style={styles.editBtnAction} onPress={() => openEdit(item)}>
+        <Edit2 size={18} color="#F48E54" />
+      </TouchableOpacity>
+    </View>
+  </View>
+)}
           />
         </SafeAreaView>
         
@@ -288,12 +291,17 @@ export default function ManageContactScreen({
               {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveButtonText}>บันทึกข้อมูล</Text>}
             </TouchableOpacity>
 
-            {editId && (
-              <TouchableOpacity style={styles.deleteLink} onPress={() => handleDelete(editId)}>
-                  <Trash2 size={16} color="#EF4444" style={{marginRight: 5}}/>
-                  <Text style={{ color: '#EF4444', fontWeight: '600' }}>ลบหน่วยงานนี้</Text>
-              </TouchableOpacity>
-            )}
+                      {/* ✅ เพิ่มปุ่มลบ เฉพาะกรณีที่เป็นการแก้ไขข้อมูลเดิม */}
+                      {editId && (
+                        <TouchableOpacity 
+                          style={styles.deleteBtn} 
+                          onPress={handleDelete} 
+                          disabled={loading}
+                        >
+                          <Trash2 size={20} color="#FF4444" />
+                          <Text style={styles.deleteBtnText}>ลบสถานที่นี้</Text>
+                        </TouchableOpacity>
+                      )}
 
             <TouchableOpacity onPress={resetForm} style={styles.cancelBtn}>
                 <Text style={{ color: '#999' }}>ยกเลิกและย้อนกลับ</Text>
@@ -306,7 +314,7 @@ export default function ManageContactScreen({
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
+  container: { flex: 1, backgroundColor: '#FFF' },
   headerArea: { paddingHorizontal: 25, marginTop: 20, marginBottom: 20 },
   headerTitle: { fontSize: 28, fontWeight: 'bold', color: '#1F2937' },
   headerSubtitle: { fontSize: 16, color: '#6B7280', marginTop: 4 },
@@ -325,14 +333,23 @@ const styles = StyleSheet.create({
   addBtn: { backgroundColor: '#F48E54', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 15, borderRadius: 12, elevation: 2 },
   addBtnText: { color: '#FFF', fontWeight: 'bold', marginLeft: 5 },
 
-  card: { backgroundColor: '#fff', marginBottom: 15, borderRadius: 24, elevation: 4, marginHorizontal: 20 },
-  cardInner: { flexDirection: 'row', alignItems: 'center', padding: 18 },
-  avatar: { width: 65, height: 65, borderRadius: 18, backgroundColor: '#F3F4F6' },
-  nameText: { fontSize: 17, fontWeight: '700', color: '#1F2937' },
-  phoneText: { color: '#F48E54', fontSize: 16, fontWeight: 'bold', marginTop: 2 },
+  facilityCard: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: '#F9FAFB', 
+    marginHorizontal: 20, 
+    marginBottom: 10, 
+    padding: 15, 
+    borderRadius: 15, 
+    borderWidth: 1, 
+    borderColor: '#F0F0F0' 
+  },
+  cardImage: { width: 60, height: 60, borderRadius: 10 }, // แก้จาก avatar เป็น cardImage ให้ขนาดเท่ากัน
+  facilityName: { fontWeight: 'bold', fontSize: 16, color: '#1F2937' }, // ใช้ชื่อเดียวกับหน้า Facilities
+  phoneText: { color: '#F48E54', fontSize: 14, fontWeight: '500', marginTop: 2 },
   tag: { alignSelf: 'flex-start', backgroundColor: '#FEE2E2', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 8, marginTop: 6 },
   tagText: { fontSize: 11, color: '#EF4444', fontWeight: 'bold' },
-  editBtnAction: { padding: 12, backgroundColor: '#FFF7ED', borderRadius: 15 },
+  editBtnAction: { padding: 12, backgroundColor: '#FFF2EB', borderRadius: 12 },
   
   radioGroup: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 5 },
   radioOption: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, backgroundColor: '#fff', borderWidth: 1, borderColor: '#E5E7EB', marginRight: 10, marginBottom: 10 },
@@ -361,5 +378,16 @@ const styles = StyleSheet.create({
   titleText: { fontSize: 18, color: '#666' },
 searchBar: { paddingHorizontal: 20, marginBottom: 10 },
   searchInput: { backgroundColor: '#F5F5F5', padding: 12, borderRadius: 12 },
-  
+  deleteBtn: { 
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 15, 
+    borderRadius: 15, 
+    marginTop: 15, 
+    borderWidth: 1,
+    borderColor: '#FFEBEB',
+    backgroundColor: '#FFF5F5'
+  },
+  deleteBtnText: { color: '#FF4444', fontWeight: 'bold', marginLeft: 8 },
 });
