@@ -64,8 +64,9 @@ export default function SearchScreen({ onBack, onGoHome, onGoSOS, onGoSearch, on
           <TouchableOpacity onPress={onBack} style={styles.backButton}>
              {/* ใส่ Text หรือ Icon ย้อนกลับได้ที่นี่ */}
           </TouchableOpacity>
-<View style={styles.header}>
-                  <Text style={styles.brandText}>Ksafe</Text>
+                  <View style={styles.header}>
+                            <Text style={styles.headerTitle}>Ksafe</Text>
+                  
                   <Text style={styles.titleText}>ค้นหาสถานที่</Text>
                 </View>
           <TextInput
@@ -292,7 +293,8 @@ const styles = StyleSheet.create({
     height: 26,
     resizeMode: 'contain',
   },
-  header: { padding: 10 },
+  header: { padding: 5, paddingBottom: 5 },
+  headerTitle: { fontSize: 32, fontWeight: '800', color: '#666' },
   brandText: { fontSize: 22, fontWeight: 'bold' },
   titleText: { fontSize: 15, color: '#666' },
   
