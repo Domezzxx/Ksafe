@@ -178,8 +178,9 @@ export default function ManageUserScreen({ onGoHome, onGoSOS, onGoSearch, onGoPr
   return (
     <View style={styles.container}>
       <SafeAreaView style={{ flex: 1 }}>
-        <TouchableOpacity onPress={() => setIsEditMode(false)} style={styles.backBtn}>
-          <Text style={styles.backArrow}>←</Text>
+        <TouchableOpacity onPress={() => setIsEditMode(false)} style={styles.backBtn} ChevronLeft size={28} color="#333">
+          <Text style={styles.backArrow}>← ย้อนกลับ</Text>
+          
         </TouchableOpacity>
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 25, paddingBottom: 100 }}>
@@ -306,5 +307,7 @@ const styles = StyleSheet.create({
   deleteBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 18 },
   footer: { position: 'absolute', bottom: 0, flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', width: '100%', height: 80, backgroundColor: '#FFF', borderTopWidth: 1, borderTopColor: '#F0F0F0', paddingBottom: 15 },
   footerButton: { padding: 10, flex: 1, alignItems: 'center' },
-  footerIcon: { width: 25, height: 25 }
+  footerIcon: { width: 25, height: 25 },
+  backArrow : {fontSize: 20, fontWeight: 'bold', marginLeft: 10},
+  backBtn: {flexDirection: 'row', alignItems: 'center', padding: 20}
 });
