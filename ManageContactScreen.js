@@ -230,9 +230,9 @@ export default function ManageContactScreen({
         
         {/* Footer Navigation */}
         <View style={styles.footer}>
-          <TouchableOpacity style={styles.footerButton} onPress={onGoHome}><Image source={require('./assets/home (2).png')} style={[styles.footerIcon, { tintColor: '#929292' }]} /></TouchableOpacity>
+          <TouchableOpacity style={styles.footerButton} onPress={onGoHome}><Image source={require('./assets/home (2).png')} style={[styles.footerIcon, { tintColor: '#D9D9D9' }]} /></TouchableOpacity>
           <TouchableOpacity style={styles.footerButton} onPress={onGoSOS}><Image source={require('./assets/emergency (1).png')} style={[styles.footerIcon, { tintColor: '#F87C47' }]} /></TouchableOpacity>
-          <TouchableOpacity style={styles.footerButton} onPress={onGoSearch}><Image source={require('./assets/map (1).png')} style={[styles.footerIcon, { tintColor: '#929292' }]} /></TouchableOpacity>
+          <TouchableOpacity style={styles.footerButton} onPress={onGoSearch}><Image source={require('./assets/map (1).png')} style={[styles.footerIcon, { tintColor: '#D9D9D9' }]} /></TouchableOpacity>
           <TouchableOpacity style={styles.footerButton} onPress={onGoProfile}><Image source={require('./assets/user.png')} style={[styles.footerIcon, { tintColor: '#D9D9D9' }]} /></TouchableOpacity>
         </View>
       </View>
