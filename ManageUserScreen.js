@@ -155,7 +155,7 @@ export default function ManageUserScreen({ onGoHome, onGoSOS, onGoSearch, onGoPr
     </View>
     <View style={styles.cardInfo}>
       <Text style={styles.userName} numberOfLines={1}>{item.firstName} {item.lastName}</Text>
-      <Text style={styles.userPhone}>📞 {item.phone}</Text>
+      <Text style={styles.userPhone}> {item.phone}</Text>
     </View>
     <TouchableOpacity style={styles.editBtn} onPress={() => openEdit(item)}>
       <Edit3 size={18} color="#F48E54" />
@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
   avatarText: { fontSize: 22, fontWeight: 'bold', color: '#F48E54' },
   cardInfo: { flex: 1, marginLeft: 10 },
   userName: { fontSize: 16, fontWeight: 'bold', color: '#1F2937' },
-  userPhone: { color: '#666', marginTop: 4, fontSize: 13 },
+  userPhone: { color: '#F48E54', fontSize: 14, fontWeight: '500', marginTop: 2 },
   editBtn: { padding: 12, backgroundColor: '#FFF2EB', borderRadius: 12 },
   formContainer: { backgroundColor: '#fff', borderRadius: 20, padding: 2, marginBottom: 20 },
   sectionLabel: { fontSize: 14, color: '#333', fontWeight: '600', marginTop: 15, marginBottom: 8 },
