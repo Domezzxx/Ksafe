@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native';
+import { Ionicons } from '@expo/vector-icons'; // ✅ เพิ่ม import นี้
 
 const WelcomeScreen = ({ onNext }) => {
   return (
@@ -20,11 +21,8 @@ const WelcomeScreen = ({ onNext }) => {
 
       <View style={styles.bottomContainer}>
         <TouchableOpacity style={styles.arrowButton} onPress={onNext}>
-          {/* ลูกศรชี้ขวา */}
-          <Image 
-            source={require('./assets/t.jpg')} 
-            style={styles.iconImage} 
-          />
+          {/* ✅ เปลี่ยนจากรูปภาพเป็นไอคอน */}
+          <Ionicons name="arrow-forward" size={28} color="#ff7843" />
         </TouchableOpacity>
       </View>
 
@@ -49,22 +47,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-end',
     paddingHorizontal: 30,
-    paddingBottom: 30, 
+    paddingBottom: 30,
   },
   arrowButton: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#f3ece5',
+    backgroundColor: '#fff0eb', // ✅ ปรับสีพื้นหลังให้เข้ากับธีมส้ม
     justifyContent: 'center',
     alignItems: 'center',
+    // เพิ่มเงาให้ดูดีขึ้น
+    shadowColor: '#ff7843',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 3,
   },
-  // 💡 สไตล์สำหรับกำหนดขนาดรูปลูกศร
-  iconImage: {
-    width: 25,  // ปรับความกว้างรูปได้ตามต้องการ
-    height: 25, // ปรับความสูงรูปได้ตามต้องการ
-    resizeMode: 'contain',
-  }
 });
 
 export default WelcomeScreen;
