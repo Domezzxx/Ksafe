@@ -187,10 +187,10 @@ export default function ManageFacilitiesScreen({ onGoHome, onGoSOS, onGoSearch, 
 
         {/* ✅ Footer นำกลับมาใส่ตรงนี้ */}
         <View style={styles.footer}>
-          <TouchableOpacity onPress={onGoHome}><Image source={require('./assets/home (2).png')} style={[styles.fIcon, {tintColor: '#ccc'}]} /></TouchableOpacity>
-          <TouchableOpacity onPress={onGoSOS}><Image source={require('./assets/emergency (1).png')} style={[styles.fIcon, {tintColor: '#ccc'}]} /></TouchableOpacity>
+          <TouchableOpacity onPress={onGoHome}><Image source={require('./assets/home (2).png')} style={[styles.fIcon, {tintColor: '#D9D9D9'}]} /></TouchableOpacity>
+          <TouchableOpacity onPress={onGoSOS}><Image source={require('./assets/emergency (1).png')} style={[styles.fIcon, {tintColor: '#D9D9D9'}]} /></TouchableOpacity>
           <TouchableOpacity onPress={onGoSearch}><Image source={require('./assets/map (1).png')} style={[styles.fIcon, {tintColor: '#F48E54'}]} /></TouchableOpacity>
-          <TouchableOpacity onPress={onGoProfile}><Image source={require('./assets/user.png')} style={[styles.fIcon, {tintColor: '#ccc'}]} /></TouchableOpacity>
+          <TouchableOpacity onPress={onGoProfile}><Image source={require('./assets/user.png')} style={[styles.fIcon, {tintColor: '#D9D9D9'}]} /></TouchableOpacity>
         </View>
       </View>
     );
