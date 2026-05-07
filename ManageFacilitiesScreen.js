@@ -188,7 +188,7 @@ export default function ManageFacilitiesScreen({ onGoHome, onGoSOS, onGoSearch, 
         {/* ✅ Footer นำกลับมาใส่ตรงนี้ */}
         <View style={styles.footer}>
           <TouchableOpacity onPress={onGoHome}><Image source={require('./assets/home (2).png')} style={[styles.fIcon, {tintColor: '#D9D9D9'}]} /></TouchableOpacity>
-          <TouchableOpacity onPress={onGoSOS}><Image source={require('./assets/emergency (1).png')} style={[styles.fIcon, {tintColor: '#D9D9D9'}]} /></TouchableOpacity>
+          <TouchableOpacity onPress={onGoSOS}><Image source={require('./assets/phone-call.png')} style={[styles.fIcon, {tintColor: '#D9D9D9'}]} /></TouchableOpacity>
           <TouchableOpacity onPress={onGoSearch}><Image source={require('./assets/map (1).png')} style={[styles.fIcon, {tintColor: '#F48E54'}]} /></TouchableOpacity>
           <TouchableOpacity onPress={onGoProfile}><Image source={require('./assets/user.png')} style={[styles.fIcon, {tintColor: '#D9D9D9'}]} /></TouchableOpacity>
         </View>
@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
   typeTabActive: { borderColor: '#F48E54', backgroundColor: '#FFF2EB' },
   saveBtn: { backgroundColor: '#F48E54', padding: 18, borderRadius: 15, marginTop: 30, alignItems: 'center' },
   saveBtnText: { color: '#FFF', fontWeight: 'bold', fontSize: 16 },
-  footer: { position: 'absolute', bottom: 15, flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', width: '100%', height: 80, backgroundColor: '#FFF', borderTopWidth: 1, borderTopColor: '#F0F0F0', paddingBottom: 15 },
+  footer: { position: 'absolute', bottom: 0, flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', width: '100%', height: 80, backgroundColor: '#FFF', borderTopWidth: 1, borderTopColor: '#F0F0F0', paddingBottom: 15 },
   footerButton: { padding: 10, flex: 1, alignItems: 'center' },
   footerIcon: { width: 25, height: 25 },
  fIcon: { width: 24, height: 24 }
