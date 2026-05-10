@@ -100,7 +100,7 @@ const Register = ({ onNext, onBack }) => {
                 >
                     <View style={styles.card}>
                         <TouchableOpacity style={styles.backButton} onPress={onBack}>
-                            <Text style={styles.backButtonText}>←</Text>
+                            <View style={styles.arrowIcon} />
                         </TouchableOpacity>
                         
                         <Text style={styles.headerText}>สร้างบัญชีผู้ใช้</Text>
@@ -165,8 +165,17 @@ const styles = StyleSheet.create({
         alignSelf: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, 
         shadowOpacity: 0.1, shadowRadius: 10, elevation: 5 
     },
-    backButton: { marginBottom: 10, alignSelf: 'flex-start' },
+    backButton: { marginBottom: 10, alignSelf: 'flex-start', padding: 4, justifyContent: 'center', alignItems: 'center' },
     backButtonText: { fontSize: 30, color: '#B0B0B0', fontWeight: 'bold' },
+    arrowIcon: {
+        width: 12,
+        height: 12,
+        borderLeftWidth: 2.5,
+        borderBottomWidth: 2.5,
+        borderColor: '#B0B0B0',
+        transform: [{ rotate: '45deg' }],
+        marginLeft: 4,
+    },
     headerText: { fontSize: 24, fontWeight: 'bold', color: '#F48E54', marginBottom: 20 },
     label: { fontSize: 14, fontWeight: 'bold', color: '#555', marginBottom: 5 },
     input: { 
