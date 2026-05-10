@@ -313,7 +313,7 @@ export default function ManageFacilitiesScreen({ onGoHome, onGoSOS, onGoSearch, 
             )}
           </TouchableOpacity>
 
-          <Text style={styles.label}>ชื่อสถานที่ 🔍 ค้นหาอัตโนมัติ</Text>
+          <Text style={styles.label}>ชื่อสถานที่</Text>
           <View style={styles.searchContainer}>
             <TextInput 
               style={styles.input} 
