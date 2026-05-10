@@ -3,17 +3,26 @@ import {
   View, Text, TouchableOpacity, Image,
   ScrollView, StyleSheet, Dimensions, StatusBar, Linking, Platform
 } from 'react-native';
-import * as Location from 'expo-location'; // ✅ เพิ่ม import
+import * as Location from 'expo-location';
 
 const { width } = Dimensions.get('window');
 
 const DEFAULT_PLACEHOLDER = 'https://via.placeholder.com/800x450.png?text=No+Image+Available';
 
+// ✅ ใช้ API Key เดียวกับ MapScreen
+const GOOGLE_MAPS_APIKEY = 'AIzaSyCzLA0NWNQk5Iu9AzC0yW1bwQ0Y_KqngSQ';
+
+const formatDistance = (meters) => {
+  if (meters < 1000) return `${Math.round(meters)} ม.`;
+  return `${(meters / 1000).toFixed(1)} กม.`;
+};
+
 export default function DetailScreen({ data, onBack, onPressMap }){
 
-  const [userLocation, setUserLocation] = useState(null); // ✅ เพิ่ม state
+  const [userLocation, setUserLocation] = useState(null);
+  const [roadDistance, setRoadDistance] = useState(null); // หน่วยเมตร
 
-  // ✅ ดึง GPS โทรศัพท์
+  // ดึง GPS
   useEffect(() => {
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -23,31 +32,30 @@ export default function DetailScreen({ data, onBack, onPressMap }){
     })();
   }, []);
 
-  // ✅ สูตร Haversine
-  const getDistance = (lat1, lon1, lat2, lon2) => {
-    const R = 6371;
-    const dLat = ((lat2 - lat1) * Math.PI) / 180;
-    const dLon = ((lon2 - lon1) * Math.PI) / 180;
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos((lat1 * Math.PI) / 180) *
-        Math.cos((lat2 * Math.PI) / 180) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-  };
+  // ✅ เรียก Distance Matrix API เมื่อได้ GPS และมีพิกัดสถานที่
+  useEffect(() => {
+    if (!userLocation) return;
+    const geo = data?.พิกัด;
+    if (!geo?.latitude || !geo?.longitude) return;
 
-  const formatDistance = (km) => {
-    if (km < 1) return `${Math.round(km * 1000)} ม.`;
-    return `${km.toFixed(1)} กม.`;
-  };
+    const origin = `${userLocation.latitude},${userLocation.longitude}`;
+    const destination = `${geo.latitude},${geo.longitude}`;
+    const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${origin}&destinations=${destination}&mode=driving&key=${GOOGLE_MAPS_APIKEY}`;
 
-  // ✅ คำนวณระยะทาง
-  const geo = data?.พิกัด;
-  const distanceLabel = (userLocation && geo?.latitude && geo?.longitude)
-    ? formatDistance(getDistance(userLocation.latitude, userLocation.longitude, geo.latitude, geo.longitude))
-    : '-- กม.';
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        const el = data.rows?.[0]?.elements?.[0];
+        if (el?.status === 'OK') {
+          setRoadDistance(el.distance.value); // เมตร
+        }
+      })
+      .catch(err => console.error("Distance Matrix Error:", err));
+  }, [userLocation, data]);
+
+  const distanceLabel = roadDistance !== null
+    ? formatDistance(roadDistance)
+    : '-- ม.';
 
   const getImageUrl = () => {
     if (data?.รูปภาพ && typeof data.รูปภาพ === 'string') {
@@ -60,7 +68,6 @@ export default function DetailScreen({ data, onBack, onPressMap }){
   };
 
   const imageUrl = getImageUrl();
-
   const phoneNumber = data?.เบอร์โทร || data?.เบอร์โทรติดต่อ || "";
 
   const handleCall = (number) => {
@@ -81,7 +88,14 @@ export default function DetailScreen({ data, onBack, onPressMap }){
       alert("ไม่พบข้อมูลพิกัดในระบบ");
     }
   };
-
+useEffect(() => {
+  if (!userLocation) return;
+  const geo = data?.พิกัด;
+  console.log("userLocation:", userLocation);
+  console.log("geo:", geo);
+  console.log("geo.latitude:", geo?.latitude);
+  // ...
+}, [userLocation, data]);
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
@@ -105,7 +119,7 @@ export default function DetailScreen({ data, onBack, onPressMap }){
           {/* สถานะและระยะทาง */}
           <View style={styles.statusRow}>
             <Text style={styles.statusText}>เปิดอยู่</Text>
-            <Text style={styles.distanceText}> | {distanceLabel}</Text>{/* ✅ แสดงระยะทางจริง */}
+            <Text style={styles.distanceText}> | {distanceLabel}</Text>
           </View>
 
           {/* ชื่อสถานที่ */}
