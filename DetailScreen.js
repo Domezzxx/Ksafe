@@ -17,7 +17,7 @@ const formatDistance = (meters) => {
   return `${(meters / 1000).toFixed(1)} กม.`;
 };
 
-export default function DetailScreen({ data, onBack, onPressMap }){
+export default function DetailScreen({ data, onBack, onPressMap }) {
 
   const [userLocation, setUserLocation] = useState(null);
   const [roadDistance, setRoadDistance] = useState(null); // หน่วยเมตร
@@ -88,21 +88,21 @@ export default function DetailScreen({ data, onBack, onPressMap }){
       alert("ไม่พบข้อมูลพิกัดในระบบ");
     }
   };
-useEffect(() => {
-  if (!userLocation) return;
-  const geo = data?.พิกัด;
-  console.log("userLocation:", userLocation);
-  console.log("geo:", geo);
-  console.log("geo.latitude:", geo?.latitude);
-  // ...
-}, [userLocation, data]);
+  useEffect(() => {
+    if (!userLocation) return;
+    const geo = data?.พิกัด;
+    console.log("userLocation:", userLocation);
+    console.log("geo:", geo);
+    console.log("geo.latitude:", geo?.latitude);
+    // ...
+  }, [userLocation, data]);
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
 
       {/* ปุ่มย้อนกลับ */}
       <TouchableOpacity style={styles.backButton} onPress={onBack}>
-        <Text style={styles.backIcon}>←</Text>
+        <View style={styles.arrowIcon} />
       </TouchableOpacity>
 
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -151,13 +151,22 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   imageWrapper: { width: width, height: 250, backgroundColor: '#f0f0f0' },
   headerImage: { width: '100%', height: '100%' },
-  backButton: { 
-    position: 'absolute', top: 50, left: 15, zIndex: 10, 
-    backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: 20, 
+  backButton: {
+    position: 'absolute', top: 50, left: 15, zIndex: 10,
+    backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: 20,
     width: 40, height: 40, justifyContent: 'center', alignItems: 'center',
     elevation: 5, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 3
   },
   backIcon: { fontSize: 24, fontWeight: 'bold', color: '#000' },
+  arrowIcon: {
+    width: 12,
+    height: 12,
+    borderLeftWidth: 2.5,
+    borderBottomWidth: 2.5,
+    borderColor: '#000',
+    transform: [{ rotate: '45deg' }],
+    marginLeft: 4,
+  },
   contentContainer: { paddingHorizontal: 20, paddingTop: 20 },
   statusRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 5 },
   statusText: { color: '#28a745', fontWeight: '600', fontSize: 16 },
