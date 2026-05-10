@@ -1,0 +1,361 @@
+import React, { useState, useEffect, useRef } from 'react';
+import {
+    View,
+    Text,
+    StyleSheet,
+    TouchableOpacity,
+    Animated,
+    PanResponder,
+    Dimensions,
+    SafeAreaView,
+    StatusBar,
+    Vibration,
+    Linking,
+    Alert,
+    Platform,
+    PermissionsAndroid
+} from 'react-native';
+import * as Location from 'expo-location';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from './firebaseConfig';
+
+const { width, height } = Dimensions.get('window');
+const SLIDE_WIDTH = width * 0.85;
+const KNOB_SIZE = 64;
+
+const saveIncidentAndCall = async (contact, reporterPhone) => {
+    // ✅ Debug: ตรวจสอบว่าได้รับค่า reporterPhone มาถูกต้องหรือไม่
+    console.log('=== SOS saveIncidentAndCall ===');
+    console.log('contact:', contact);
+    console.log('reporterPhone:', reporterPhone);
+
+    try {
+        let { status } = await Location.requestForegroundPermissionsAsync();
+        let locationData = { latitude: null, longitude: null };
+
+        if (status === 'granted') {
+            const location = await Location.getCurrentPositionAsync({
+                accuracy: Location.Accuracy.Balanced,
+            });
+            locationData.latitude = location.coords.latitude;
+            locationData.longitude = location.coords.longitude;
+        }
+
+        await addDoc(collection(db, 'incident_reports'), {
+            service_name: contact.name,
+            phone_called: contact.phone,
+            latitude: locationData.latitude,
+            longitude: locationData.longitude,
+            reporter_id: reporterPhone || 'ไม่ระบุตัวตน',
+            timestamp: serverTimestamp(),
+            source: 'SOS',
+        });
+
+        console.log('✅ บันทึก Firestore สำเร็จ reporter_id:', reporterPhone || 'ไม่ระบุตัวตน');
+
+    } catch (error) {
+        console.error('Error saving SOS incident:', error);
+    } finally {
+        if (Platform.OS === 'android') {
+            try {
+                const granted = await PermissionsAndroid.request(
+                    PermissionsAndroid.PERMISSIONS.CALL_PHONE,
+                    {
+                        title: 'ขออนุญาตโทรออก',
+                        message: 'แอปต้องการสิทธิ์โทรออกเพื่อใช้งาน SOS ฉุกเฉิน',
+                        buttonPositive: 'อนุญาต',
+                        buttonNegative: 'ไม่อนุญาต',
+                    }
+                );
+                if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+                    Linking.openURL(`tel:${contact.phone}`);
+                } else {
+                    Alert.alert('ไม่ได้รับอนุญาต', 'กรุณาอนุญาตการโทรออกในการตั้งค่าแอป');
+                }
+            } catch (err) {
+                Linking.openURL(`tel:${contact.phone}`).catch(() => {
+                    Alert.alert('เกิดข้อผิดพลาด', 'ไม่สามารถโทรออกได้ในขณะนี้');
+                });
+            }
+        } else {
+            Linking.openURL(`telprompt:${contact.phone}`).catch(() => {
+                Alert.alert('เกิดข้อผิดพลาด', 'ไม่สามารถโทรออกได้ในขณะนี้');
+            });
+        }
+    }
+};
+
+export default function SOSScreen({ emergencyContact: contactFromApp, onCancel, currentUserPhone, onGoHome, onGoSearch, onGoProfile }) {
+    const [isCounting, setIsCounting] = useState(false);
+    const [timer, setTimer] = useState(5);
+    const pan = useRef(new Animated.Value(0)).current;
+
+    // ✅ Debug: ตรวจสอบว่า props ถูกส่งมาถูกต้อง
+    useEffect(() => {
+        console.log('=== SOSScreen mounted ===');
+        console.log('currentUserPhone prop:', currentUserPhone);
+        console.log('emergencyContact prop:', contactFromApp);
+
+        // ขอ permission CALL_PHONE ตอนเปิดหน้า SOS บน Android
+        if (Platform.OS === 'android') {
+            PermissionsAndroid.request(
+                PermissionsAndroid.PERMISSIONS.CALL_PHONE,
+                {
+                    title: 'ขออนุญาตโทรออก',
+                    message: 'แอปต้องการสิทธิ์โทรออกเพื่อใช้งาน SOS ฉุกเฉิน',
+                    buttonPositive: 'อนุญาต',
+                    buttonNegative: 'ไม่อนุญาต',
+                }
+            );
+        }
+    }, []);
+
+    const emergencyContact = contactFromApp || { name: 'สถานีตำรวจ', phone: '191' };
+
+    const redBarWidth = Animated.add(pan, KNOB_SIZE);
+
+    useEffect(() => {
+        let interval;
+        if (isCounting && timer > 0) {
+            Vibration.vibrate(400);
+            interval = setInterval(() => {
+                setTimer((prev) => prev - 1);
+            }, 1000);
+        } else if (timer === 0) {
+            Vibration.vibrate([0, 500, 200, 500]);
+            saveIncidentAndCall(emergencyContact, currentUserPhone);
+            handleReset();
+        }
+        return () => clearInterval(interval);
+    }, [isCounting, timer]);
+
+    const handleReset = () => {
+        setIsCounting(false);
+        setTimer(5);
+        pan.setValue(0);
+        Vibration.cancel();
+        if (onCancel) onCancel();
+    };
+
+    const panResponder = useRef(
+        PanResponder.create({
+            onStartShouldSetPanResponder: () => true,
+            onPanResponderMove: (_, gestureState) => {
+                if (gestureState.dx >= 0 && gestureState.dx <= SLIDE_WIDTH - KNOB_SIZE - 10) {
+                    pan.setValue(gestureState.dx);
+                }
+            },
+            onPanResponderRelease: (_, gestureState) => {
+                if (gestureState.dx >= SLIDE_WIDTH * 0.5) {
+                    Animated.spring(pan, { toValue: SLIDE_WIDTH - KNOB_SIZE - 10, useNativeDriver: false }).start();
+                    setIsCounting(true);
+                } else {
+                    Animated.spring(pan, { toValue: 0, useNativeDriver: false }).start();
+                }
+            },
+        })
+    ).current;
+
+    return (
+        <View style={styles.container}>
+            <StatusBar barStyle="light-content" />
+            <SafeAreaView style={{ flex: 1 }}>
+
+                <View style={[
+                    styles.headerContainer,
+                    isCounting ? styles.headerTop : styles.headerCenter
+                ]}>
+                    <Text style={styles.headerTitle}>SOS ฉุกเฉิน</Text>
+                    <Text style={styles.subHeader}>{emergencyContact.name}</Text>
+                    <Text style={styles.subHeader}>{emergencyContact.phone}</Text>
+                </View>
+
+                <View style={styles.centerContent}>
+                    {isCounting && (
+                        <View style={styles.timerContainer}>
+                            <View style={styles.timerCircle}>
+                                <Text style={styles.timerNumber}>{timer}</Text>
+                            </View>
+                            <Text style={styles.infoText}>
+                                เราจะโทรหาบริการฉุกเฉิน{"\n"}เมื่อสิ้นสุดเวลานับถอยหลัง
+                            </Text>
+                        </View>
+                    )}
+                </View>
+
+                <View style={styles.bottomSection}>
+                    <Text style={styles.footerNote}>
+                        โปรดอยู่ในที่ปลอดภัย{"\n"}คุณสามารถยกเลิกได้ก่อนครบเวลา
+                    </Text>
+
+                    {!isCounting ? (
+                        <View style={styles.slideTrack}>
+                            <Animated.View
+                                style={[
+                                    styles.redFill,
+                                    { width: redBarWidth, position: 'absolute', left: 5 }
+                                ]}
+                            />
+                            <Animated.View
+                                style={[styles.knob, { transform: [{ translateX: pan }] }]}
+                                {...panResponder.panHandlers}
+                            />
+                            <Text style={styles.slideText}>โทรฉุกเฉิน</Text>
+                        </View>
+                    ) : (
+                        <View style={styles.slideTrackActive}>
+                            <View style={[styles.redFill, { width: SLIDE_WIDTH - 10 }]} />
+                            <View style={[styles.knob, { position: 'absolute', right: 5 }]} />
+                        </View>
+                    )}
+
+                    <TouchableOpacity style={styles.cancelArea} onPress={handleReset}>
+                        <View style={styles.cancelCircle}>
+                            <Text style={styles.cancelX}>✕</Text>
+                        </View>
+                        <Text style={styles.cancelLabel}>ยกเลิก</Text>
+                    </TouchableOpacity>
+                </View>
+
+            </SafeAreaView>
+        </View>
+    );
+}
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: '#FF8A48'
+    },
+    headerContainer: {
+        alignItems: 'center',
+        width: '100%',
+        position: 'absolute',
+        zIndex: 5,
+    },
+    headerCenter: {
+        top: height * 0.35,
+    },
+    headerTop: {
+        top: 60,
+    },
+    headerTitle: {
+        fontSize: 70,
+        fontWeight: 'bold',
+        color: '#fff',
+        textAlign: 'center'
+    },
+    subHeader: {
+        fontSize: 18,
+        color: '#fff',
+        lineHeight: 26,
+        textAlign: 'center'
+    },
+    centerContent: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center'
+    },
+    timerContainer: {
+        alignItems: 'center',
+        marginTop: 80,
+    },
+    timerCircle: {
+        width: 220,
+        height: 220,
+        borderRadius: 110,
+        backgroundColor: '#fff',
+        justifyContent: 'center',
+        alignItems: 'center',
+        elevation: 5,
+        shadowColor: '#000',
+        shadowOpacity: 0.1,
+        shadowRadius: 10,
+    },
+    timerNumber: {
+        fontSize: 120,
+        fontWeight: 'bold',
+        color: '#FF8A48'
+    },
+    infoText: {
+        color: '#fff',
+        textAlign: 'center',
+        fontSize: 20,
+        marginTop: 30,
+        fontWeight: 'bold'
+    },
+    bottomSection: {
+        paddingBottom: 40,
+        alignItems: 'center'
+    },
+    footerNote: {
+        color: '#fff',
+        textAlign: 'center',
+        marginBottom: 20,
+        fontSize: 14
+    },
+    slideTrack: {
+        width: SLIDE_WIDTH,
+        height: 74,
+        backgroundColor: '#fff',
+        borderRadius: 37,
+        padding: 5,
+        justifyContent: 'center',
+        overflow: 'hidden'
+    },
+    slideTrackActive: {
+        width: SLIDE_WIDTH,
+        height: 74,
+        backgroundColor: '#ffffffd0',
+        borderRadius: 37,
+        padding: 5,
+        flexDirection: 'row',
+        alignItems: 'center'
+    },
+    redFill: {
+        height: 64,
+        backgroundColor: '#FF5E5E',
+        borderRadius: 32
+    },
+    knob: {
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        backgroundColor: '#fff',
+        elevation: 5,
+        shadowColor: '#000',
+        shadowOpacity: 0.2,
+        shadowOffset: { width: 0, height: 2 },
+        zIndex: 10
+    },
+    slideText: {
+        position: 'absolute',
+        right: 40,
+        color: '#FF5E5E',
+        fontSize: 20,
+        fontWeight: 'bold'
+    },
+    cancelArea: {
+        marginTop: 20,
+        alignItems: 'center'
+    },
+    cancelCircle: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: '#fff',
+        justifyContent: 'center',
+        alignItems: 'center'
+    },
+    cancelX: {
+        fontSize: 20,
+        color: '#FF5E5E',
+        fontWeight: 'bold'
+    },
+    cancelLabel: {
+        color: '#fff',
+        marginTop: 5,
+        fontSize: 16,
+        fontWeight: '600'
+    },
+});
