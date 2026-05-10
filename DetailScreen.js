@@ -1,33 +1,66 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, Image,
   ScrollView, StyleSheet, Dimensions, StatusBar, Linking, Platform
 } from 'react-native';
+import * as Location from 'expo-location'; // ✅ เพิ่ม import
 
 const { width } = Dimensions.get('window');
 
-// 💡 กำหนด URL รูปภาพสำรอง (Placeholder) กรณีที่สถานที่นั้นไม่มีรูป
 const DEFAULT_PLACEHOLDER = 'https://via.placeholder.com/800x450.png?text=No+Image+Available';
 
 export default function DetailScreen({ data, onBack, onPressMap }){
-  
-  // 💡 การตัดสินใจเลือกรูปภาพ (เน้นดึงจาก Database เป็นหลัก)
+
+  const [userLocation, setUserLocation] = useState(null); // ✅ เพิ่ม state
+
+  // ✅ ดึง GPS โทรศัพท์
+  useEffect(() => {
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') return;
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      setUserLocation(loc.coords);
+    })();
+  }, []);
+
+  // ✅ สูตร Haversine
+  const getDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  const formatDistance = (km) => {
+    if (km < 1) return `${Math.round(km * 1000)} ม.`;
+    return `${km.toFixed(1)} กม.`;
+  };
+
+  // ✅ คำนวณระยะทาง
+  const geo = data?.พิกัด;
+  const distanceLabel = (userLocation && geo?.latitude && geo?.longitude)
+    ? formatDistance(getDistance(userLocation.latitude, userLocation.longitude, geo.latitude, geo.longitude))
+    : '-- กม.';
+
   const getImageUrl = () => {
-    // 1. ตรวจสอบฟิลด์ "รูปภาพ" (จาก Base64 หรือ URL ใน Firestore)
     if (data?.รูปภาพ && typeof data.รูปภาพ === 'string') {
       return { uri: data.รูปภาพ };
     }
-    // 2. ถ้ามี imageUrl (เผื่อใช้ชื่อฟิลด์ภาษาอังกฤษ)
     if (data?.imageUrl && typeof data.imageUrl === 'string') {
       return { uri: data.imageUrl };
     }
-    // 3. ถ้าไม่มีข้อมูลรูปเลย ให้ใช้รูป Placeholder จากเว็บ
     return { uri: DEFAULT_PLACEHOLDER };
   };
 
   const imageUrl = getImageUrl();
 
-  // ตรวจสอบเบอร์โทรศัพท์
   const phoneNumber = data?.เบอร์โทร || data?.เบอร์โทรติดต่อ || "";
 
   const handleCall = (number) => {
@@ -72,7 +105,7 @@ export default function DetailScreen({ data, onBack, onPressMap }){
           {/* สถานะและระยะทาง */}
           <View style={styles.statusRow}>
             <Text style={styles.statusText}>เปิดอยู่</Text>
-            <Text style={styles.distanceText}> | ข้อมูลสถานที่</Text>
+            <Text style={styles.distanceText}> | {distanceLabel}</Text>{/* ✅ แสดงระยะทางจริง */}
           </View>
 
           {/* ชื่อสถานที่ */}
