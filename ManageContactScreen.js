@@ -248,7 +248,8 @@ export default function ManageContactScreen({
       <SafeAreaView style={{ flex: 1 }}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
           <TouchableOpacity onPress={resetForm} style={styles.backHeader}>
-            <Text style={styles.backText}>← {editId ? 'แก้ไขข้อมูล' : 'เพิ่มหน่วยงานใหม่'}</Text>
+            <View style={styles.arrowIcon} />
+            <Text style={styles.backText}>{editId ? 'แก้ไขข้อมูล' : 'เพิ่มหน่วยงานใหม่'}</Text>
           </TouchableOpacity>
           <View style={styles.formArea}>
             <View style={styles.inputGroup}>
@@ -356,8 +357,17 @@ const styles = StyleSheet.create({
   radioActive: { backgroundColor: '#F48E54', borderColor: '#F48E54' },
   radioText: { fontSize: 14, fontWeight: '600' },
   
-  backHeader: { marginHorizontal: 25, marginTop: 20, marginBottom: 25 },
-  backText: { fontSize: 20, color: '#0f0f0f', fontWeight: 'bold' },
+  backHeader: { marginHorizontal: 25, marginTop: 20, marginBottom: 25, flexDirection: 'row', alignItems: 'center' },
+  backText: { fontSize: 20, color: '#0f0f0f', fontWeight: 'bold', marginLeft: 10 },
+  arrowIcon: {
+    width: 12,
+    height: 12,
+    borderLeftWidth: 2.5,
+    borderBottomWidth: 2.5,
+    borderColor: '#0f0f0f',
+    transform: [{ rotate: '45deg' }],
+    marginLeft: 4,
+  },
   formArea: { paddingHorizontal: 25 },
   inputGroup: { marginBottom: 20 },
   label: { fontSize: 15, fontWeight: 'bold', color: '#374151', marginBottom: 10 },
