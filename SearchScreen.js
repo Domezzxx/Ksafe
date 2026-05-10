@@ -11,12 +11,11 @@ import {
   SafeAreaView,
   StatusBar
 } from 'react-native';
+import * as Location from 'expo-location'; // ✅ เพิ่ม import
 
-// ตรวจสอบชื่อไฟล์ config ของคุณ
 import { db } from './firebaseConfig'; 
 import { collection, onSnapshot, query } from 'firebase/firestore';
 
-// อัปเดตหมวดหมู่ให้ตรงกับข้อมูลในระบบ
 const categories = ['ทั้งหมด', 'โรงพยาบาล', 'สถานีตำรวจ', 'กู้ภัย', 'สถานีดับเพลิง'];
 
 export default function SearchScreen({ onBack, onGoHome, onGoSOS, onGoSearch, onGoProfile, goToDetail }) {
@@ -24,10 +23,40 @@ export default function SearchScreen({ onBack, onGoHome, onGoSOS, onGoSearch, on
   const [selectedCategory, setSelectedCategory] = useState('ทั้งหมด');
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [userLocation, setUserLocation] = useState(null); // ✅ เพิ่ม state
+
+  // ✅ สูตร Haversine
+  const getDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  const formatDistance = (km) => {
+    if (km < 1) return `${Math.round(km * 1000)} ม.`;
+    return `${km.toFixed(1)} กม.`;
+  };
+
+  // ✅ แยก useEffect สองอัน — location และ Firestore
+  useEffect(() => {
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') return;
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      setUserLocation(loc.coords);
+    })(); // ✅ เรียก IIFE ด้วย () ที่ปิดท้าย
+  }, []);
 
   useEffect(() => {
     const q = query(collection(db, 'facilities'));
-    
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const dataList = querySnapshot.docs.map(doc => ({
         id: doc.id,
@@ -39,18 +68,15 @@ export default function SearchScreen({ onBack, onGoHome, onGoSOS, onGoSearch, on
       console.error("Firebase Error: ", error);
       setLoading(false);
     });
-
     return () => unsubscribe();
   }, []);
 
   const filteredData = locations.filter(item => {
     const matchCategory =
       selectedCategory === 'ทั้งหมด' || item.ประเภท === selectedCategory;
-
     const matchText = (item.ชื่อ || '')
       .toLowerCase()
       .includes(searchText.toLowerCase().trim());
-
     return matchCategory && matchText;
   });
 
@@ -62,13 +88,11 @@ export default function SearchScreen({ onBack, onGoHome, onGoSOS, onGoSearch, on
         {/* Header Section */}
         <View style={styles.headerContainer}>
           <TouchableOpacity onPress={onBack} style={styles.backButton}>
-             {/* ใส่ Text หรือ Icon ย้อนกลับได้ที่นี่ */}
           </TouchableOpacity>
-                  <View style={styles.header}>
-                            <Text style={styles.headerTitle}>Ksafe</Text>
-                  
-                  <Text style={styles.titleText}>ค้นหาสถานที่</Text>
-                </View>
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>Ksafe</Text>
+            <Text style={styles.titleText}>ค้นหาสถานที่</Text>
+          </View>
           <TextInput
             placeholder="ค้นหาสถานที่..."
             value={searchText}
@@ -77,7 +101,7 @@ export default function SearchScreen({ onBack, onGoHome, onGoSOS, onGoSearch, on
             style={styles.searchInput}
           />
 
-          {/* 📂 หมวดหมู่ */}
+          {/* หมวดหมู่ */}
           <View style={styles.categoryWrapper}>
             <View style={styles.categoryContainer}>
               {categories.map((cat) => (
@@ -104,7 +128,7 @@ export default function SearchScreen({ onBack, onGoHome, onGoSOS, onGoSearch, on
           </View>
         </View>
 
-        {/* 📋 รายการสถานที่ */}
+        {/* รายการสถานที่ */}
         {loading ? (
           <ActivityIndicator size="large" color="#ff7a00" style={{ marginTop: 50 }} />
         ) : (
@@ -113,29 +137,36 @@ export default function SearchScreen({ onBack, onGoHome, onGoSOS, onGoSearch, on
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
-            renderItem={({ item }) => (
-              <View style={styles.card}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                  <Text style={styles.cardTitle} numberOfLines={1}>
-                    {item.ชื่อ}
-                  </Text>
-                  <Text style={styles.distanceText}>2 กม.</Text>
-                </View>
-                
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}>
-                  <Text style={styles.cardAddress} numberOfLines={2}>
-                    {item.ที่อยู่}
-                  </Text>
+            renderItem={({ item }) => {
+              // ✅ คำนวณระยะทางใน renderItem โดยตรง
+              const geo = item.พิกัด;
+              const distanceLabel = (userLocation && geo?.latitude && geo?.longitude)
+                ? formatDistance(getDistance(userLocation.latitude, userLocation.longitude, geo.latitude, geo.longitude))
+                : '-- กม.';
+
+              return (
+                <View style={styles.card}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                    <Text style={styles.cardTitle} numberOfLines={1}>
+                      {item.ชื่อ}
+                    </Text>
+                    <Text style={styles.distanceText}>{distanceLabel}</Text>
+                  </View>
                   
-                  <TouchableOpacity
-                    onPress={() => goToDetail(item)}
-                    style={styles.infoButton}
-                  >
-                    <Text style={styles.infoButtonText}>i</Text>
-                  </TouchableOpacity>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}>
+                    <Text style={styles.cardAddress} numberOfLines={2}>
+                      {item.ที่อยู่}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => goToDetail(item)}
+                      style={styles.infoButton}
+                    >
+                      <Text style={styles.infoButtonText}>i</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
-              </View>
-            )}
+              );
+            }}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
                 <Text style={{ color: '#999', fontSize: 16 }}>ไม่พบข้อมูลที่ค้นหา</Text>
@@ -145,7 +176,7 @@ export default function SearchScreen({ onBack, onGoHome, onGoSOS, onGoSearch, on
         )}
       </SafeAreaView>
 
-      {/* 🧭 Navigation Footer */}
+      {/* Navigation Footer */}
       <View style={styles.footer}>
         <TouchableOpacity style={styles.footerButton} onPress={onGoHome}>
           <Image source={require('./assets/home (2).png')} style={[styles.footerIcon, { tintColor: '#929292' }]} />
@@ -174,7 +205,7 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     paddingHorizontal: 20,
-    paddingTop: 10, // เพิ่มระยะห่างจากขอบบน
+    paddingTop: 10,
   },
   backButton: {
     paddingVertical: 5,
@@ -212,7 +243,7 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: 20,
     paddingTop: 10,
-    paddingBottom: 110, // เว้นระยะให้ไม่โดน Footer บัง
+    paddingBottom: 110,
   },
   card: {
     backgroundColor: '#fff',
@@ -221,7 +252,6 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     borderWidth: 1,
     borderColor: '#f0f0f0',
-    // เพิ่มเงาให้ดูสวยงามและมีมิติ
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -272,11 +302,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     alignItems: 'center',
     width: '100%',
-    height: 90, // ปรับความสูง Footer ให้พอดี
+    height: 90,
     backgroundColor: '#FFF',
     borderTopWidth: 1,
     borderTopColor: '#F0F0F0',
-    paddingBottom: 25, // ดันไอคอนขึ้นเพื่อหลบขอบล่างของ iPhone
+    paddingBottom: 25,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -3 },
     shadowOpacity: 0.05,
@@ -297,5 +327,4 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 32, fontWeight: '800', color: '#666' },
   brandText: { fontSize: 22, fontWeight: 'bold' },
   titleText: { fontSize: 15, color: '#666' },
-  
 });
