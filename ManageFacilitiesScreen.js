@@ -40,7 +40,7 @@ export default function ManageFacilitiesScreen({ onGoHome, onGoSOS, onGoSearch, 
   const [loadingLocation, setLoadingLocation] = useState(false);
   
   const isSelectingRef = useRef(false);
-  const searchTimer = useRef(null); // สำหรับทำ Debounce
+  const searchTimer = useRef(null);
 
   useEffect(() => {
     const q = query(collection(db, "facilities"));
@@ -53,17 +53,15 @@ export default function ManageFacilitiesScreen({ onGoHome, onGoSOS, onGoSearch, 
 
   const GOOGLE_API_KEY = 'AIzaSyCzLA0NWNQk5Iu9AzC0yW1bwQ0Y_KqngSQ';
 
-  // 🔍 ฟังก์ชันค้นหาที่อยู่ (ปรับปรุง Debounce)
+  // 🔍 ค้นหาที่อยู่ (Debounce 600ms เพื่อประหยัด API)
   const searchLocation = (queryText) => {
-    setName(queryText); // อัปเดต UI ทันที
-    
+    setName(queryText);
     if (isSelectingRef.current || queryText.length < 2) {
       setSearchSuggestions([]);
       return;
     }
 
     if (searchTimer.current) clearTimeout(searchTimer.current);
-
     searchTimer.current = setTimeout(async () => {
       try {
         setLoadingLocation(true);
@@ -78,28 +76,30 @@ export default function ManageFacilitiesScreen({ onGoHome, onGoSOS, onGoSearch, 
       } finally {
         setLoadingLocation(false);
       }
-    }, 600); // รอให้หยุดพิมพ์ 0.6 วินาที
+    }, 600);
   };
 
-  // 📍 ฟังก์ชันเลือกสถานที่จากรายการแนะนำ
+  // 📍 เลือกสถานที่ และดึงข้อมูลพิกัด + เบอร์โทร
   const selectLocationFromSearch = async (location) => {
     setLoadingLocation(true);
     isSelectingRef.current = true;
-    setSearchSuggestions([]); // ปิดรายการแนะนำทันที
+    setSearchSuggestions([]); 
 
     try {
-      const geocodeResponse = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?place_id=${location.place_id}&key=${GOOGLE_API_KEY}`,
+      // ใช้ Place Details API เพื่อดึงข้อมูลเชิงลึก (เบอร์โทร + พิกัด)
+      const detailsResponse = await fetch(
+        `https://maps.googleapis.com/maps/api/place/details/json?place_id=${location.place_id}&fields=geometry,formatted_address,formatted_phone_number&key=${GOOGLE_API_KEY}&language=th`,
         { headers: { 'User-Agent': 'KsafeApp/1.0' } }
       );
-      const data = await geocodeResponse.json();
+      const data = await detailsResponse.json();
       
-      if (data.results && data.results.length > 0) {
-        const result = data.results[0];
+      if (data.result) {
+        const result = data.result;
         const { lat, lng } = result.geometry.location;
         const fullAddress = result.formatted_address;
+        const phoneNumber = result.formatted_phone_number || '';
 
-        // อัปเดตตำแหน่งแผนที่และหมุด
+        // 1. เลื่อนแผนที่ไปยังพิกัดใหม่
         setRegion({
           latitude: lat,
           longitude: lng,
@@ -107,12 +107,21 @@ export default function ManageFacilitiesScreen({ onGoHome, onGoSOS, onGoSearch, 
           longitudeDelta: 0.005,
         });
         
-        // แยกชื่อและที่อยู่ให้สวยงาม
+        // 2. เซตชื่อสถานที่
         setName(location.structured_formatting?.main_text || fullAddress.split(',')[0]);
+
+        // 3. เซตที่อยู่
         setAddress(location.structured_formatting?.secondary_text || fullAddress);
+
+        // 4. เซตเบอร์โทรศัพท์ (ทำความสะอาด format ให้เหลือแต่ตัวเลข)
+        if (phoneNumber) {
+          setPhone(phoneNumber.replace(/\s+/g, '').replace(/-/g, ''));
+        } else {
+          setPhone(''); 
+        }
       }
     } catch (error) {
-      Alert.alert('ผิดพลาด', 'ไม่สามารถดึงข้อมูลพิกัดได้');
+      Alert.alert('ผิดพลาด', 'ไม่สามารถดึงข้อมูลสถานที่ได้');
     } finally {
       setTimeout(() => { isSelectingRef.current = false; }, 1000);
       setLoadingLocation(false);
@@ -271,7 +280,6 @@ export default function ManageFacilitiesScreen({ onGoHome, onGoSOS, onGoSearch, 
             contentContainerStyle={{ paddingBottom: 100 }}
           />
         </SafeAreaView>
-
         <View style={styles.footer}>
           <TouchableOpacity onPress={onGoHome}><Image source={require('./assets/home (2).png')} style={[styles.fIcon, { tintColor: '#D9D9D9' }]} /></TouchableOpacity>
           <TouchableOpacity onPress={onGoSOS}><Image source={require('./assets/phone-call.png')} style={[styles.fIcon, { tintColor: '#D9D9D9' }]} /></TouchableOpacity>
@@ -346,10 +354,22 @@ export default function ManageFacilitiesScreen({ onGoHome, onGoSOS, onGoSearch, 
           </View>
 
           <Text style={styles.label}>เบอร์โทรติดต่อ</Text>
-          <TextInput style={styles.input} value={phone} onChangeText={setPhone} keyboardType="phone-pad" placeholder="0xx-xxx-xxxx" />
+          <TextInput 
+            style={styles.input} 
+            value={phone} 
+            onChangeText={setPhone} 
+            keyboardType="phone-pad" 
+            placeholder="0xx-xxx-xxxx" 
+          />
 
           <Text style={styles.label}>ที่อยู่</Text>
-          <TextInput style={[styles.input, { height: 80, textAlignVertical: 'top' }]} value={address} onChangeText={setAddress} multiline placeholder="รายละเอียดที่อยู่..." />
+          <TextInput 
+            style={[styles.input, { height: 80, textAlignVertical: 'top' }]} 
+            value={address} 
+            onChangeText={setAddress} 
+            multiline 
+            placeholder="รายละเอียดที่อยู่..." 
+          />
 
           <Text style={styles.label}>ประเภทบริการ</Text>
           <View style={styles.typeRow}>
