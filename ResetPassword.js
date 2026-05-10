@@ -82,7 +82,7 @@ const ResetPassword = ({ onNext, onBack, onResetSuccess, phoneNumber }) => {
         >
           <View style={styles.card}>
             <TouchableOpacity style={styles.backButton} onPress={onBack}>
-              <Text style={styles.backButtonText}>←</Text>
+              <View style={styles.arrowIcon} />
             </TouchableOpacity>
 
             <Text style={styles.headerText}>ตั้งรหัสผ่านใหม่</Text>
@@ -134,8 +134,17 @@ const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: 'center', padding: 20 },
   keyboardView: { flex: 1, justifyContent: 'center' },
   card: { backgroundColor: '#FFFFFF', borderRadius: 20, padding: 25, width: '100%', maxWidth: 400, alignSelf: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10, elevation: 5 },
-  backButton: { marginBottom: 10, alignSelf: 'flex-start' },
+  backButton: { marginBottom: 10, alignSelf: 'flex-start', padding: 4, justifyContent: 'center', alignItems: 'center' },
   backButtonText: { fontSize: 35, fontWeight: 'bold', color: '#B0B0B0', marginTop: -10 },
+  arrowIcon: {
+    width: 12,
+    height: 12,
+    borderLeftWidth: 2.5,
+    borderBottomWidth: 2.5,
+    borderColor: '#B0B0B0',
+    transform: [{ rotate: '45deg' }],
+    marginLeft: 4,
+  },
   headerText: { fontSize: 24, fontWeight: 'bold', color: '#F48E54', marginBottom: 20 },
   label: { fontSize: 14, fontWeight: 'bold', color: '#555', marginBottom: 8 },
   input: { borderWidth: 1, borderColor: '#DDDDDD', borderRadius: 15, paddingHorizontal: 15, paddingVertical: 12, fontSize: 16, marginBottom: 15 },
