@@ -234,8 +234,8 @@ export default function ProfileScreen({ currentUserPhone, onGoHome, onGoSOS, onG
         <View style={{ flex: 1 }}>
           <ScrollView style={styles.container}>
             <View style={styles.editHeader}>
-              <TouchableOpacity onPress={() => setIsEditing(false)}>
-                <Ionicons name="arrow-back" size={24} color="#333" />
+              <TouchableOpacity onPress={() => setIsEditing(false)} style={styles.arrowBtn}>
+                <View style={styles.arrowIcon} />
               </TouchableOpacity>
               <TouchableOpacity onPress={() => setShowConfirmModal(true)}>
                 <Text style={styles.saveText}>บันทึก</Text>
@@ -483,8 +483,8 @@ export default function ProfileScreen({ currentUserPhone, onGoHome, onGoSOS, onG
       <Modal visible={showEmergencyModal} animationType="slide" transparent={false}>
         <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
           <View style={styles.fullScreenHeader}>
-            <TouchableOpacity onPress={() => setShowEmergencyModal(false)}>
-              <Ionicons name="arrow-back" size={24} color="#333" />
+            <TouchableOpacity onPress={() => setShowEmergencyModal(false)} style={styles.arrowBtn}>
+              <View style={styles.arrowIcon} />
             </TouchableOpacity>
             <Text style={styles.fullScreenTitle}>เลือกเบอร์ติดต่อฉุกเฉิน</Text>
             <View style={{ width: 24 }} />
@@ -591,6 +591,16 @@ const styles = StyleSheet.create({
   actionSub: { fontSize: 13, color: '#888', marginTop: 2 },
   editHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   saveText: { color: '#007AFF', fontSize: 16, fontWeight: 'bold' },
+  arrowBtn: { padding: 4, justifyContent: 'center', alignItems: 'center' },
+  arrowIcon: {
+    width: 12,
+    height: 12,
+    borderLeftWidth: 2.5,
+    borderBottomWidth: 2.5,
+    borderColor: '#333',
+    transform: [{ rotate: '45deg' }],
+    marginLeft: 4,
+  },
   profileImageSection: { alignItems: 'center', marginBottom: 20 },
   editProfilePic: { width: 90, height: 90, borderRadius: 45, backgroundColor: '#eee', marginBottom: 10 },
   changePicText: { color: '#007AFF', fontSize: 14 },
