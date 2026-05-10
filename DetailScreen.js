@@ -6,28 +6,34 @@ import {
 
 const { width } = Dimensions.get('window');
 
-// 💡 กำหนด URL รูปภาพสำรอง (Placeholder) กรณีที่สถานที่นั้นไม่มีรูป
-const DEFAULT_PLACEHOLDER = 'https://via.placeholder.com/800x450.png?text=No+Image+Available';
+// 💡 1. Image Map จับคู่ชื่อสถานที่ (ตรวจสอบชื่อให้ตรงกับ Firebase)
+const locationImages = {
+  "โรงพยาบาลมหาวิทยาลัยเทคโนโลยีสุรนารี": require('./assets/sut.jpg'),
+  "PCU-SUT (ศูนย์แพทย์ชุมชน)": require('./assets/pcu.png'),
+  "PCU-SUT (ศูนย์บริการสุขภาพ มทส.)": require('./assets/pcu.png'), // เพิ่มเผื่อชื่อใน Log
+  "โรงพยาบาลราชสีมา ฮอสพิทอล": require('./assets/ratchasimahospital.png'),
+  "โรงพยาบาลกรุงเทพนครราชสีมา": require('./assets/kungthep.png'),
+  "โรงพยาบาลริมลิฟวิ่ง": require('./assets/rim.png'),
+  "โรงพยาบาลค่ายสุรนารี": require('./assets/suranareecamp.jpg'),
+  "สถานีตำรวจภูธรโพธิ์กลาง": require('./assets/poograng.png'),
+  "สถานีตำรวจภูธรเมืองนครราชสีมา": require('./assets/police.png'),
+  "ศูนย์กู้ภัยฮุก 31": require('./assets/hook31.png'),
+  "ชมรมจิตอาสาแสดทอง": require('./assets/sadthong.png'),
+  "การไฟฟ้าส่วนภูมิภาคเขต 3": require('./assets/pea_korat.png'),
+  "สำนักงานกรมทางหลวงที่ 10": require('./assets/highway10.png'),
+  "สถานีดับเพลิงสุรนารายณ์": require('./assets/fire_suranarai.png'),
+  "ดับเพลิงจอมสุรางค์": require('./assets/fire_chomsurang.png'),
+  "ศูนย์ป้องกันและบรรเทาสาธารณภัย เขต 5": require('./assets/disaster_prevent5.png'),
+};
+
+const defaultImage = require('./assets/sut.jpg'); 
 
 export default function DetailScreen({ data, onBack, onPressMap }){
   
-  // 💡 การตัดสินใจเลือกรูปภาพ (เน้นดึงจาก Database เป็นหลัก)
-  const getImageUrl = () => {
-    // 1. ตรวจสอบฟิลด์ "รูปภาพ" (จาก Base64 หรือ URL ใน Firestore)
-    if (data?.รูปภาพ && typeof data.รูปภาพ === 'string') {
-      return { uri: data.รูปภาพ };
-    }
-    // 2. ถ้ามี imageUrl (เผื่อใช้ชื่อฟิลด์ภาษาอังกฤษ)
-    if (data?.imageUrl && typeof data.imageUrl === 'string') {
-      return { uri: data.imageUrl };
-    }
-    // 3. ถ้าไม่มีข้อมูลรูปเลย ให้ใช้รูป Placeholder จากเว็บ
-    return { uri: DEFAULT_PLACEHOLDER };
-  };
+  // ดึงรูปภาพตามชื่อ หรือใช้รูปสำรอง
+  const imageUrl = locationImages[data?.ชื่อ] || defaultImage;
 
-  const imageUrl = getImageUrl();
-
-  // ตรวจสอบเบอร์โทรศัพท์
+  // รวมชื่อฟิลด์เบอร์โทรจาก Firebase (ป้องกัน Error จาก Log ที่คุณส่งมา)
   const phoneNumber = data?.เบอร์โทร || data?.เบอร์โทรติดต่อ || "";
 
   const handleCall = (number) => {
@@ -41,7 +47,7 @@ export default function DetailScreen({ data, onBack, onPressMap }){
   const handleOpenInternalMap = () => {
     if (data?.พิกัด) {
       onPressMap({
-        ชื่อ: data.ชื่อ,
+        ชื่อ: data.ชื่อ, // ส่งค่าให้ตรงกับที่ MapScreen รอรับ
         พิกัด: data.พิกัด,
       });
     } else {
@@ -55,7 +61,7 @@ export default function DetailScreen({ data, onBack, onPressMap }){
 
       {/* ปุ่มย้อนกลับ */}
       <TouchableOpacity style={styles.backButton} onPress={onBack}>
-        <Text style={styles.backIcon}>←</Text>
+        <View style={styles.arrowIcon} />
       </TouchableOpacity>
 
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -72,7 +78,7 @@ export default function DetailScreen({ data, onBack, onPressMap }){
           {/* สถานะและระยะทาง */}
           <View style={styles.statusRow}>
             <Text style={styles.statusText}>เปิดอยู่</Text>
-            <Text style={styles.distanceText}> | ข้อมูลสถานที่</Text>
+            <Text style={styles.distanceText}> | 2 กม.</Text>
           </View>
 
           {/* ชื่อสถานที่ */}
@@ -102,15 +108,24 @@ export default function DetailScreen({ data, onBack, onPressMap }){
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
-  imageWrapper: { width: width, height: 250, backgroundColor: '#f0f0f0' },
+  imageWrapper: { width: width, height: 250 },
   headerImage: { width: '100%', height: '100%' },
   backButton: { 
     position: 'absolute', top: 50, left: 15, zIndex: 10, 
-    backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: 20, 
+    backgroundColor: 'rgba(255,255,255,0.8)', borderRadius: 20, 
     width: 40, height: 40, justifyContent: 'center', alignItems: 'center',
     elevation: 5, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 3
   },
   backIcon: { fontSize: 24, fontWeight: 'bold', color: '#000' },
+  arrowIcon: {
+    width: 12,
+    height: 12,
+    borderLeftWidth: 2.5,
+    borderBottomWidth: 2.5,
+    borderColor: '#000',
+    transform: [{ rotate: '45deg' }],
+    marginLeft: 4,
+  },
   contentContainer: { paddingHorizontal: 20, paddingTop: 20 },
   statusRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 5 },
   statusText: { color: '#28a745', fontWeight: '600', fontSize: 16 },
