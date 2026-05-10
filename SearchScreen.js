@@ -11,50 +11,41 @@ import {
   SafeAreaView,
   StatusBar
 } from 'react-native';
-import * as Location from 'expo-location'; // ✅ เพิ่ม import
+import * as Location from 'expo-location';
 
 import { db } from './firebaseConfig'; 
 import { collection, onSnapshot, query } from 'firebase/firestore';
 
+// ✅ ใช้ API Key เดียวกับ MapScreen
+const GOOGLE_MAPS_APIKEY = 'AIzaSyCzLA0NWNQk5Iu9AzC0yW1bwQ0Y_KqngSQ';
+
 const categories = ['ทั้งหมด', 'โรงพยาบาล', 'สถานีตำรวจ', 'กู้ภัย', 'สถานีดับเพลิง'];
+
+const formatDistance = (meters) => {
+  if (meters < 1000) return `${Math.round(meters)} ม.`;
+  return `${(meters / 1000).toFixed(1)} กม.`;
+};
 
 export default function SearchScreen({ onBack, onGoHome, onGoSOS, onGoSearch, onGoProfile, goToDetail }) {
   const [searchText, setSearchText] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ทั้งหมด');
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [userLocation, setUserLocation] = useState(null); // ✅ เพิ่ม state
+  const [userLocation, setUserLocation] = useState(null);
+  // ✅ เก็บระยะทางถนนจริงของทุกสถานที่ { [id]: distanceInMeters }
+  const [roadDistances, setRoadDistances] = useState({});
 
-  // ✅ สูตร Haversine
-  const getDistance = (lat1, lon1, lat2, lon2) => {
-    const R = 6371;
-    const dLat = ((lat2 - lat1) * Math.PI) / 180;
-    const dLon = ((lon2 - lon1) * Math.PI) / 180;
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos((lat1 * Math.PI) / 180) *
-        Math.cos((lat2 * Math.PI) / 180) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-  };
-
-  const formatDistance = (km) => {
-    if (km < 1) return `${Math.round(km * 1000)} ม.`;
-    return `${km.toFixed(1)} กม.`;
-  };
-
-  // ✅ แยก useEffect สองอัน — location และ Firestore
+  // ดึง GPS
   useEffect(() => {
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') return;
       const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       setUserLocation(loc.coords);
-    })(); // ✅ เรียก IIFE ด้วย () ที่ปิดท้าย
+    })();
   }, []);
 
+  // ดึงข้อมูลจาก Firestore
   useEffect(() => {
     const q = query(collection(db, 'facilities'));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -70,6 +61,42 @@ export default function SearchScreen({ onBack, onGoHome, onGoSOS, onGoSearch, on
     });
     return () => unsubscribe();
   }, []);
+
+  // ✅ เรียก Distance Matrix API 1 ครั้ง เมื่อได้ทั้ง userLocation และ locations
+  useEffect(() => {
+    if (!userLocation || locations.length === 0) return;
+
+    // กรองเฉพาะสถานที่ที่มีพิกัด
+    const validLocations = locations.filter(
+      item => item.พิกัด?.latitude && item.พิกัด?.longitude
+    );
+    if (validLocations.length === 0) return;
+
+    const origin = `${userLocation.latitude},${userLocation.longitude}`;
+
+    // ส่งจุดหมายทุกแห่งใน 1 request (คั่นด้วย |)
+    const destinations = validLocations
+      .map(item => `${item.พิกัด.latitude},${item.พิกัด.longitude}`)
+      .join('|');
+
+    const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${origin}&destinations=${destinations}&mode=driving&key=${GOOGLE_MAPS_APIKEY}`;
+
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        if (data.status !== 'OK') return;
+        const elements = data.rows[0]?.elements || [];
+        const newDistances = {};
+        validLocations.forEach((item, index) => {
+          const el = elements[index];
+          if (el?.status === 'OK') {
+            newDistances[item.id] = el.distance.value; // หน่วยเมตร
+          }
+        });
+        setRoadDistances(newDistances);
+      })
+      .catch(err => console.error("Distance Matrix Error:", err));
+  }, [userLocation, locations]);
 
   const filteredData = locations.filter(item => {
     const matchCategory =
@@ -138,11 +165,10 @@ export default function SearchScreen({ onBack, onGoHome, onGoSOS, onGoSearch, on
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
             renderItem={({ item }) => {
-              // ✅ คำนวณระยะทางใน renderItem โดยตรง
-              const geo = item.พิกัด;
-              const distanceLabel = (userLocation && geo?.latitude && geo?.longitude)
-                ? formatDistance(getDistance(userLocation.latitude, userLocation.longitude, geo.latitude, geo.longitude))
-                : '-- กม.';
+              // ✅ ดึงระยะทางถนนจริงจาก state
+              const distanceLabel = roadDistances[item.id] !== undefined
+                ? formatDistance(roadDistances[item.id])
+                : '-- ม.';
 
               return (
                 <View style={styles.card}>
@@ -196,133 +222,45 @@ export default function SearchScreen({ onBack, onGoHome, onGoSOS, onGoSearch, on
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  safeArea: {
-    flex: 1,
-  },
-  headerContainer: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
-  },
-  backButton: {
-    paddingVertical: 5,
-  },
+  container: { flex: 1, backgroundColor: '#fff' },
+  safeArea: { flex: 1 },
+  headerContainer: { paddingHorizontal: 20, paddingTop: 10 },
+  backButton: { paddingVertical: 5 },
   searchInput: {
-    borderWidth: 1,
-    borderColor: '#eee',
-    borderRadius: 15,
-    padding: 15,
-    marginVertical: 10,
-    fontSize: 16,
-    backgroundColor: '#fcfcfc',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    borderWidth: 1, borderColor: '#eee', borderRadius: 15,
+    padding: 15, marginVertical: 10, fontSize: 16, backgroundColor: '#fcfcfc',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05, shadowRadius: 4, elevation: 2,
   },
-  categoryWrapper: {
-    marginBottom: 10,
-  },
-  categoryContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  categoryButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    margin: 4,
-    borderRadius: 20,
-  },
-  categoryText: {
-    fontSize: 14,
-  },
-  listContent: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 110,
-  },
+  categoryWrapper: { marginBottom: 10 },
+  categoryContainer: { flexDirection: 'row', flexWrap: 'wrap' },
+  categoryButton: { paddingHorizontal: 16, paddingVertical: 8, margin: 4, borderRadius: 20 },
+  categoryText: { fontSize: 14 },
+  listContent: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 110 },
   card: {
-    backgroundColor: '#fff',
-    padding: 18,
-    borderRadius: 20,
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: '#f0f0f0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
+    backgroundColor: '#fff', padding: 18, borderRadius: 20, marginBottom: 15,
+    borderWidth: 1, borderColor: '#f0f0f0',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05, shadowRadius: 8, elevation: 3,
   },
-  cardTitle: {
-    fontSize: 17,
-    fontWeight: 'bold',
-    flex: 1,
-    color: '#333',
-  },
-  distanceText: {
-    color: '#ff7a00',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  cardAddress: {
-    color: '#777',
-    fontSize: 14,
-    flex: 1,
-    marginRight: 10,
-    lineHeight: 20,
-  },
+  cardTitle: { fontSize: 17, fontWeight: 'bold', flex: 1, color: '#333' },
+  distanceText: { color: '#ff7a00', fontSize: 13, fontWeight: '600' },
+  cardAddress: { color: '#777', fontSize: 14, flex: 1, marginRight: 10, lineHeight: 20 },
   infoButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#eee',
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: 36, height: 36, borderRadius: 18, backgroundColor: '#fff',
+    borderWidth: 1, borderColor: '#eee', justifyContent: 'center', alignItems: 'center',
   },
-  infoButtonText: {
-    fontSize: 16,
-    color: '#ff7a00',
-    fontWeight: 'bold',
-  },
-  emptyContainer: {
-    marginTop: 60,
-    alignItems: 'center',
-  },
+  infoButtonText: { fontSize: 16, color: '#ff7a00', fontWeight: 'bold' },
+  emptyContainer: { marginTop: 60, alignItems: 'center' },
   footer: {
-    position: 'absolute',
-    bottom: 0,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    width: '100%',
-    height: 90,
-    backgroundColor: '#FFF',
-    borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
-    paddingBottom: 25,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 10,
+    position: 'absolute', bottom: 0, flexDirection: 'row', justifyContent: 'space-around',
+    alignItems: 'center', width: '100%', height: 90, backgroundColor: '#FFF',
+    borderTopWidth: 1, borderTopColor: '#F0F0F0', paddingBottom: 25,
+    shadowColor: '#000', shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.05, shadowRadius: 5, elevation: 10,
   },
-  footerButton: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  footerIcon: {
-    width: 26,
-    height: 26,
-    resizeMode: 'contain',
-  },
+  footerButton: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  footerIcon: { width: 26, height: 26, resizeMode: 'contain' },
   header: { padding: 5, paddingBottom: 5 },
   headerTitle: { fontSize: 32, fontWeight: '800', color: '#666' },
   brandText: { fontSize: 22, fontWeight: 'bold' },
