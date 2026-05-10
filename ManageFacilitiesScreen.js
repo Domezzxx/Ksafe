@@ -7,7 +7,7 @@ import {
 import { collection, query, onSnapshot, addDoc, updateDoc, doc, deleteDoc, GeoPoint } from 'firebase/firestore';
 import { db } from './firebaseConfig';
 import * as ImagePicker from 'expo-image-picker';
-import { ChevronLeft, Edit3, Trash2, Plus, ChevronDown, Camera } from 'lucide-react-native';
+import { Edit3, Trash2, Plus, ChevronDown, Camera } from 'lucide-react-native';
 import MapView, { Marker } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -220,7 +220,9 @@ export default function ManageFacilitiesScreen({ onGoHome, onGoSOS, onGoSearch, 
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : null} style={styles.container}>
       <SafeAreaView style={{ flex: 1 }}>
         <View style={styles.formHeader}>
-          <TouchableOpacity onPress={resetForm}><ChevronLeft size={28} color="#333" /></TouchableOpacity>
+          <TouchableOpacity onPress={resetForm} style={styles.backButton}>
+            <View style={styles.arrowIcon} />
+          </TouchableOpacity>
           <Text style={styles.formTitle}>{editId ? 'แก้ไขข้อมูล' : 'เพิ่มข้อมูลใหม่'}</Text>
         </View>
         <ScrollView style={styles.formContent} keyboardShouldPersistTaps="handled">
@@ -308,6 +310,16 @@ const styles = StyleSheet.create({
   editBtn: { padding: 12, backgroundColor: '#FFF2EB', borderRadius: 12 },
   formHeader: { flexDirection: 'row', alignItems: 'center', padding: 20 },
   formTitle: { fontSize: 20, fontWeight: 'bold', marginLeft: 10 },
+  backButton: { padding: 4, justifyContent: 'center', alignItems: 'center' },
+  arrowIcon: {
+    width: 12,
+    height: 12,
+    borderLeftWidth: 2.5,
+    borderBottomWidth: 2.5,
+    borderColor: '#333',
+    transform: [{ rotate: '45deg' }],
+    marginLeft: 4,
+  },
   formContent: { paddingHorizontal: 20 },
   label: { fontWeight: 'bold', marginTop: 15, marginBottom: 8 },
   input: { borderWidth: 1, borderColor: '#EEE', padding: 12, borderRadius: 12, backgroundColor: '#FAFAFA' },
