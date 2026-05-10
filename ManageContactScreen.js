@@ -295,7 +295,7 @@ export default function ManageContactScreen({
                       {editId && (
                         <TouchableOpacity 
                           style={styles.deleteBtn} 
-                          onPress={handleDelete} 
+                          onPress={() => handleDelete(editId)}
                           disabled={loading}
                         >
                           <Trash2 size={20} color="#FF4444" />
