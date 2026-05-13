@@ -408,7 +408,23 @@ export default function ProfileScreen({ currentUserPhone, onGoHome, onGoSOS, onG
                 {profile.coordinate && <Marker coordinate={profile.coordinate} />}
               </MapView>
             </View>
-            <TouchableOpacity style={styles.btnOrange} onPress={() => setShowMapModal(false)}>
+            <TouchableOpacity
+              style={styles.btnOrange}
+              onPress={async () => {
+                setShowMapModal(false);
+                // ✅ บันทึก coordinate และ address ลง Firestore ทันทีที่กดยืนยัน
+                if (userDocId && profile.coordinate) {
+                  try {
+                    await updateDoc(doc(db, 'users', userDocId), {
+                      coordinate: profile.coordinate,
+                      address: profile.address || '',
+                    });
+                  } catch (err) {
+                    console.error('Error saving location:', err);
+                  }
+                }
+              }}
+            >
               <Text style={styles.btnOrangeText}>ยืนยันที่อยู่</Text>
             </TouchableOpacity>
             {profile.address ? (
