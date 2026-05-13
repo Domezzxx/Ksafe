@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import MapView, { Marker, Circle, PROVIDER_GOOGLE } from 'react-native-maps';
-import { ArrowLeft, ChevronRight, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight as ChevronRightIcon } from 'lucide-react-native';
+import { ChevronRight, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight as ChevronRightIcon } from 'lucide-react-native';
 import { db } from './firebaseConfig';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 
@@ -133,7 +133,7 @@ export default function IncidentSortingScreen({ filter, onBack }) {
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} hitSlop={10}><ArrowLeft color="#111" size={24} /></TouchableOpacity>
+        <TouchableOpacity onPress={onBack} hitSlop={10} style={styles.backButton}><View style={styles.arrowIcon} /></TouchableOpacity>
         <Text style={styles.headerTitle}>สรุปพิกัดแยกประเภท</Text>
         <View style={{ width: 24 }} />
       </View>
@@ -229,6 +229,16 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F9FAFB' },
   header: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, backgroundColor: '#FFF', alignItems: 'center' },
   headerTitle: { fontSize: 17, fontWeight: 'bold' },
+  backButton: { padding: 4, justifyContent: 'center', alignItems: 'center' },
+  arrowIcon: {
+    width: 12,
+    height: 12,
+    borderLeftWidth: 2.5,
+    borderBottomWidth: 2.5,
+    borderColor: '#111',
+    transform: [{ rotate: '45deg' }],
+    marginLeft: 4,
+  },
   calendarContainer: { position: 'absolute', top: 15, left: 15, zIndex: 1000, flexDirection: 'row', alignItems: 'flex-start' },
   calendarBtn: { backgroundColor: '#F7934C', padding: 10, borderRadius: 12, elevation: 5 },
   datePill: { backgroundColor: 'rgba(0,0,0,0.7)', flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 12, marginLeft: 8 },
