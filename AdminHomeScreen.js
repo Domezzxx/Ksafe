@@ -1,22 +1,27 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   Image, ActivityIndicator, StatusBar, Modal, FlatList
 } from 'react-native';
 import MapView, { Marker, Circle, Callout, PROVIDER_GOOGLE } from 'react-native-maps';
 import { db } from './firebaseConfig';
-import { collection, onSnapshot, query, getCountFromServer } from 'firebase/firestore';
+import { collection, onSnapshot, query, getCountFromServer, getDocs } from 'firebase/firestore';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ChevronDown } from 'lucide-react-native'; // อย่าลืมลงไลบรารีนี้ หรือเปลี่ยนเป็น Image แทนได้ครับ
+import { ChevronDown } from 'lucide-react-native';
 
-// ── รายการบริการ (Hardcode จาก assets) ──
-const SERVICE_LIST = [
-  { key: 'jrajon', label: 'สายด่วนจราจร', image: require('./assets/jrajon.png'), accent: '#3B82F6' },
-  { key: 'police', label: 'สถานีตำรวจ', image: require('./assets/police.png'), accent: '#6366F1' },
-  { key: 'fire', label: 'เพลิงไหม้', image: require('./assets/fire.png'), accent: '#EF4444' },
-  { key: 'electric', label: 'การไฟฟ้าส่วนภูมิภาค', image: require('./assets/phifa.png'), accent: '#F59E0B' },
-  { key: 'rescue', label: 'แพทย์ฉุกเฉิน', image: require('./assets/rp.png'), accent: '#10B981' },
-];
+// ── รายการ config รูปภาพ/สี ตาม category (เพิ่มตามที่มีในฐานข้อมูล) ──
+const CATEGORY_CONFIG = {
+  'โรงพยาบาล': { image: require('./assets/rp.png'), accent: '#fa9f17' },
+   'สถานีตำรวจ':    { image: require('./assets/police.png'), accent: '#fa9f17' },
+   'เพลิงไหม้': { image: require('./assets/fire.png'),   accent: '#fa9f17' },
+   'กู้ภัย': { image: require('./assets/rs.png'),   accent: '#fa9f17' },
+  'ความปลอดภัย': { image: require('./assets/safety.png'),   accent: '#fa9f17' },
+  'สาธารณูปโภค': { image: require('./assets/phifa.png'),   accent: '#fa9f17' },
+
+
+};
+const DEFAULT_CONFIG = { image: require('./assets/jrajon.png'), accent: '#9CA3AF' };
 
 const MONTHS = [
   { label: 'มกราคม', value: 0 }, { label: 'กุมภาพันธ์', value: 1 }, { label: 'มีนาคม', value: 2 },
@@ -104,27 +109,72 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [showDropdown, setShowDropdown] = useState(false);
 
+  // ✅ State สำหรับ dynamic SERVICE_LIST และ ref สำหรับ category map
+  const categoryMapRef = useRef({}); // title → category (ใช้ ref เพื่อไม่ให้ stale closure ใน listener)
+  const [serviceList, setServiceList] = useState([]);
+
+  // ── ✅ ดึง emergency_services เพื่อ build categoryMap และ serviceList ──
+  useEffect(() => {
+    const fetchEmergencyServices = async () => {
+      try {
+        const snap = await getDocs(collection(db, 'emergency_services'));
+        const map = {};
+        const categoriesSet = new Set();
+
+        snap.docs.forEach(doc => {
+          const data = doc.data();
+          if (data.title && data.category) {
+            map[data.title] = data.category; // เช่น "โรงพยาบาลมหาราช" → "โรงพยาบาล"
+            categoriesSet.add(data.category);
+          }
+        });
+
+        categoryMapRef.current = map;
+
+        // สร้าง serviceList แบบ dynamic ตาม category ที่มีจริงใน emergency_services
+        const list = [...categoriesSet].map(cat => ({
+          key: cat,
+          label: cat,
+          ...(CATEGORY_CONFIG[cat] ?? DEFAULT_CONFIG),
+        }));
+        setServiceList(list);
+      } catch (e) {
+        console.error('emergency_services fetch error:', e);
+      }
+    };
+
+    fetchEmergencyServices();
+  }, []);
+
   // ── ✅ Realtime listener: incidents + นับเฉพาะวันนี้ ──
   useEffect(() => {
     const q = query(collection(db, 'incident_reports'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const startOfToday = getStartOfToday();
-
       const rawData = snapshot.docs.map(doc => {
         const data = doc.data();
+
         let lat = data.latitude !== undefined ? parseFloat(data.latitude) : NaN;
         let lng = data.longitude !== undefined ? parseFloat(data.longitude) : NaN;
         if (data.location && typeof data.location.latitude === 'number') {
           lat = data.location.latitude;
           lng = data.location.longitude;
         }
+
+        // ✅ Resolve category: service_name → match กับ emergency_services.title → ได้ category
+        const resolvedCategory =
+          categoryMapRef.current[data.service_name] ?? // match กับ emergency_services.title
+          data.category ??                              // fallback ถ้ามี category อยู่แล้ว
+          data.service_name;                            // fallback สุดท้าย
+
         return {
           id: doc.id,
           ...data,
           lat,
           lng,
           hasCoords: !isNaN(lat) && !isNaN(lng),
-          parsedDate: parseDate(data.timestamp) // เก็บไว้ใช้ filter เดือน
+          parsedDate: parseDate(data.timestamp),
+          resolvedCategory, // ✅ เพิ่มฟิลด์นี้
         };
       });
 
@@ -171,7 +221,7 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
     const counts = {};
     incidents.forEach(item => {
       if (item.parsedDate && item.parsedDate.getMonth() === selectedMonth) {
-        const name = item.service_name;
+        const name = item.resolvedCategory; // ✅ ใช้ค่าที่ resolve จาก emergency_services แล้ว
         if (name) {
           counts[name] = (counts[name] || 0) + 1;
         }
@@ -232,17 +282,23 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
           </View>
 
           <View style={styles.cardColRight}>
-            <View style={[styles.cardSmall, { backgroundColor: '#1E1B4B' }]}>
+            <View style={[styles.cardSmall, { backgroundColor: '#3f398a' }]}>
               <View style={[styles.deco, { width: 60, height: 60, top: -15, right: -15, backgroundColor: 'rgba(255,255,255,0.08)' }]} />
               <Text style={styles.cardIcon}>👤</Text>
               <Text style={styles.cardNum}>{statsLoading ? '–' : stats.totalUsers}</Text>
               <Text style={styles.cardLabel}>ผู้ใช้ทั้งหมด</Text>
             </View>
-            <View style={[styles.cardSmall, { backgroundColor: '#065F46' }]}>
+            <View style={[styles.cardSmall, { backgroundColor: '#c21b16' }]}>
               <View style={[styles.deco, { width: 60, height: 60, top: -15, right: -15, backgroundColor: 'rgba(255,255,255,0.08)' }]} />
-              <Text style={styles.cardIcon}>🏥</Text>
-              <Text style={styles.cardNum}>{statsLoading ? '–' : stats.totalFacilities}</Text>
-              <Text style={styles.cardLabel}>สถานที่ในระบบ</Text>
+              <Text style={styles.cardIcon}>📅</Text>
+              {incidentLoading ? (
+                <ActivityIndicator color="#FFF" style={{ marginVertical: 6 }} />
+              ) : (
+                <Text style={styles.cardNum}>
+                  {incidents.filter(item => item.parsedDate && item.parsedDate.getMonth() === selectedMonth).length}
+                </Text>
+              )}
+              <Text style={styles.cardLabel}>เหตุเดือน{MONTHS[selectedMonth].label}</Text>
             </View>
           </View>
         </View>
@@ -348,37 +404,41 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
           </View>
 
           {/* ✅ ปุ่ม Dropdown เลือกเดือน */}
-          <TouchableOpacity 
-            style={styles.dropdownButton} 
+          <TouchableOpacity
+            style={styles.dropdownButton}
             onPress={() => setShowDropdown(true)}
             activeOpacity={0.7}
           >
             <Text style={styles.dropdownButtonText}>{MONTHS[selectedMonth].label}</Text>
-            <ChevronDown size={14} color="#6B7280" style={{marginLeft: 4}} />
+            <ChevronDown size={14} color="#6B7280" style={{ marginLeft: 4 }} />
           </TouchableOpacity>
         </View>
 
         <View style={styles.serviceListWrapper}>
-          {SERVICE_LIST.map((service, index) => (
-            <ServiceRow
-              key={service.key}
-              name={service.label}
-              count={monthlyFilteredCounts[service.label] || 0} // กรองตามเดือนที่เลือก
-              image={service.image}
-              accent={service.accent}
-              maxCount={currentMaxCount}
-              isLast={index === SERVICE_LIST.length - 1}
-            />
-          ))}
+          {serviceList.length === 0 ? (
+            <ActivityIndicator color="#FF5A3C" style={{ padding: 20 }} />
+          ) : (
+            serviceList.map((service, index) => (
+              <ServiceRow
+                key={service.key}
+                name={service.label}
+                count={monthlyFilteredCounts[service.label] || 0}
+                image={service.image}
+                accent={service.accent}
+                maxCount={currentMaxCount}
+                isLast={index === serviceList.length - 1}
+              />
+            ))
+          )}
         </View>
 
       </ScrollView>
 
       {/* ✅ Modal สำหรับ Dropdown เดือน */}
       <Modal visible={showDropdown} transparent animationType="fade">
-        <TouchableOpacity 
-          style={styles.modalOverlay} 
-          activeOpacity={1} 
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
           onPress={() => setShowDropdown(false)}
         >
           <View style={styles.dropdownList}>
@@ -387,7 +447,7 @@ const AdminHomeScreen = ({ onLogout, onGoHome, onGoSOS, onGoSearch, onGoProfile,
               data={MONTHS}
               keyExtractor={(item) => item.value.toString()}
               renderItem={({ item }) => (
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.dropdownItem, selectedMonth === item.value && { backgroundColor: '#FFF0ED' }]}
                   onPress={() => {
                     setSelectedMonth(item.value);
