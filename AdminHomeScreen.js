@@ -16,7 +16,7 @@ const CATEGORY_CONFIG = {
    'สถานีตำรวจ':    { image: require('./assets/police.png'), accent: '#fa9f17' },
    'เพลิงไหม้': { image: require('./assets/fire.png'),   accent: '#fa9f17' },
    'กู้ภัย': { image: require('./assets/rs.png'),   accent: '#fa9f17' },
-  'ความปลอดภัย': { image: require('./assets/safety.png'),   accent: '#fa9f17' },
+  // TODO: 'ความปลอดภัย' — assets/safety.png ยังไม่ถูก commit เข้า repo จึงตกไปใช้ DEFAULT_CONFIG ชั่วคราว
   'สาธารณูปโภค': { image: require('./assets/phifa.png'),   accent: '#fa9f17' },
 
 
